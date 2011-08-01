@@ -5,6 +5,8 @@ import collections
 Choice = collections.namedtuple('Choice', ['label', 'value'])
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 Question = collections.namedtuple('Question', ['id', 'name', 'datatype', 'label', 'choices'])
+QuestionGroup = collections.namedtuple('QuestionGroup', ['id', 'name', 'items'])
+Form = collections.namedtuple('Form', ['id', 'version', 'items'])
 
 def _(tag, ns_prefix=None):
     namespace_uri = {
@@ -13,21 +15,6 @@ def _(tag, ns_prefix=None):
         'ocr': 'http://www.openclinica.org/ns/rules/v3.1',
     }[ns_prefix]
     return '{%s}%s' % (namespace_uri, tag)
-
-def get_forms(studyevents, formdefs):
-    return [get_form(studyevent, formdefs) for studyevent in studyevents]
-
-def get_form(studyevent, formdefs):
-    form_id, version = form_info(studyevent)
-    form_node = [n for n in formdefs if n.attrib['OID'] == version][0]
-    return {'id': form_id, 'version': version, 'node': form_node}
-
-def form_info(studyevent):
-    id = studyevent.attrib['OID']
-    versions = [fr.attrib['FormOID'] for fr in studyevent.findall(_('FormRef'))]
-    latest_version = versions[0]
-
-    return id, latest_version
 
 def parse_code_lists(root):
     code_lists = [parse_code_list(cl_node) for cl_node in root.findall(_('CodeList'))]
@@ -50,7 +37,8 @@ def parse_code_list_item(cli_node, datatype):
     return Choice(label, value)
 
 def parse_items(root, code_lists):
-    return filter(lambda e: e, (parse_item(item_node, code_lists) for item_node in root.findall(_('ItemDef'))))
+    questions = filter(lambda e: e, (parse_item(item_node, code_lists) for item_node in root.findall(_('ItemDef'))))
+    return dict((q.id, q) for q in questions)
 
 def parse_item(item_node, code_lists):
     id = item_node.attrib['OID']
@@ -61,9 +49,10 @@ def parse_item(item_node, code_lists):
     q_node = item_node.find(_('Question'))
     if q_node is None:
         #calculated field only?
-        return None
-
-    label = q_node.find(_('TranslatedText')).text.strip()
+        label = '[[ %s : calculate / preload?? ]]' % name
+        #return None
+    else:
+        label = q_node.find(_('TranslatedText')).text.strip()
 
     choices_node = item_node.find(_('CodeListRef'))
     if choices_node is not None:
@@ -74,23 +63,55 @@ def parse_item(item_node, code_lists):
 
     return Question(id, name, datatype, label, choices)
 
+def parse_groups(root, items):
+    groups = [parse_group(group_node, items) for group_node in root.findall(_('ItemGroupDef'))]
+    return dict((g.id, g) for g in groups)    
+
+def parse_group(group_node, items):
+    id = group_node.attrib['OID']
+    name = group_node.attrib['Name']
+
+    child_nodes = sorted(group_node.findall(_('ItemRef')), key=lambda node: int(node.attrib['OrderNumber']))
+    children = [items[c.attrib['ItemOID']] for c in child_nodes]
+
+    return QuestionGroup(id, name, children)
+
+def parse_form(form_info, groups):
+    child_nodes = form_info['node'].findall(_('ItemGroupRef'))
+    children = [groups[c.attrib['ItemGroupOID']] for c in child_nodes]
+    return Form(form_info['id'], form_info['version'], children)
+
+def parse_forms(root, groups):
+    studyevents = node.findall(_('StudyEventDef'))
+    formdefs = node.findall(_('FormDef'))
+    return get_forms(studyevents, formdefs, groups)
+
+def get_forms(studyevents, formdefs, groups):
+    return [parse_form(form_info(studyevent, formdefs), groups) for studyevent in studyevents]
+
+def form_info(studyevent, formdefs):
+    id = studyevent.attrib['OID']
+    versions = [fr.attrib['FormOID'] for fr in studyevent.findall(_('FormRef'))]
+    latest_version = versions[0]
+    form_node = [n for n in formdefs if n.attrib['OID'] == latest_version][0]
+    return {'id': id, 'version': latest_version, 'node': form_node}
+
+def parse_rules(node):
+    pass
+    
 
 doc = ElementTree.parse(sys.stdin)
 root = doc.getroot()
 
 node = root.find(_('Study')).find(_('MetaDataVersion'))
 
-
-
-
-studyevents = node.findall(_('StudyEventDef'))
-formdefs = node.findall(_('FormDef'))
-itemgroupdefs = node.findall(_('ItemGroupDef'))
-itemdefs = node.findall(_('ItemDef'))    
-
-#forms = get_forms(studyevents, formdefs)
-#print forms
-
-
 codelists = parse_code_lists(node)
-print parse_items(node, codelists)
+questions = parse_items(node, codelists)
+groups = parse_groups(node, questions)
+forms = parse_forms(node, groups)
+
+parse_rules(node.find(_('Rules', 'ocr')))
+
+print forms
+
+
