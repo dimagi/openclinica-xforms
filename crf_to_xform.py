@@ -98,20 +98,37 @@ def form_info(studyevent, formdefs):
 
 def parse_rules(node):
     pass
+
+def pprint(o):
+    def convert(o):
+        if hasattr(o, '__iter__'):
+            if hasattr(o, '_asdict'):
+                return convert(o._asdict())
+            elif hasattr(o, 'iteritems'):
+                return dict((k, convert(v)) for k, v in o.iteritems())
+            else:
+                return [convert(e) for e in o]
+        else:
+            return o
+
+    import pprint
+    pp = pprint.PrettyPrinter(indent=2)
+    pp.pprint(convert(o))
     
+    
+if __name__ == "__main__":
 
-doc = ElementTree.parse(sys.stdin)
-root = doc.getroot()
+    doc = ElementTree.parse(sys.stdin)
+    root = doc.getroot()
 
-node = root.find(_('Study')).find(_('MetaDataVersion'))
+    node = root.find(_('Study')).find(_('MetaDataVersion'))
 
-codelists = parse_code_lists(node)
-questions = parse_items(node, codelists)
-groups = parse_groups(node, questions)
-forms = parse_forms(node, groups)
+    codelists = parse_code_lists(node)
+    questions = parse_items(node, codelists)
+    groups = parse_groups(node, questions)
+    forms = parse_forms(node, groups)
 
-parse_rules(node.find(_('Rules', 'ocr')))
+    parse_rules(node.find(_('Rules', 'ocr')))
 
-print forms
-
+    pprint(forms)
 
