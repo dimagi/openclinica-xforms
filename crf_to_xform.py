@@ -81,7 +81,7 @@ def parse_form(form_info, groups):
     children = [groups[c.attrib['ItemGroupOID']] for c in child_nodes]
     return Form(form_info['id'], form_info['version'], children)
 
-def parse_forms(root, groups):
+def parse_forms(node, groups):
     studyevents = node.findall(_('StudyEventDef'))
     formdefs = node.findall(_('FormDef'))
     return get_forms(studyevents, formdefs, groups)
@@ -89,6 +89,9 @@ def parse_forms(root, groups):
 def get_forms(studyevents, formdefs, groups):
     return [parse_form(form_info(studyevent, formdefs), groups) for studyevent in studyevents]
 
+# my understanding was that StudyEvents contain FormDefs that are different revisions of
+# the same form (and selects the first as the most recent). the latest CRF has a StudyEvent
+# containing different forms. worry about this later.
 def form_info(studyevent, formdefs):
     id = studyevent.attrib['OID']
     versions = [fr.attrib['FormOID'] for fr in studyevent.findall(_('FormRef'))]
@@ -96,8 +99,42 @@ def form_info(studyevent, formdefs):
     form_node = [n for n in formdefs if n.attrib['OID'] == latest_version][0]
     return {'id': id, 'version': latest_version, 'node': form_node}
 
+def parse_study(docroot):
+    node = docroot.find(_('Study')).find(_('MetaDataVersion'))
+
+    codelists = parse_code_lists(node)
+    questions = parse_items(node, codelists)
+    groups = parse_groups(node, questions)
+    forms = parse_forms(node, groups)
+
+    parse_rules(node.find(_('Rules', 'ocr')))
+
+    return forms
+
 def parse_rules(node):
+    ruledefs = [parse_ruledef(n) for n in node.findall(_('RuleDef', 'ocr'))]
+
+
+def parse_ruledef(node):
+    id = node.attrib['OID']
+    expr = node.find(_('Expression', 'ocr')).text
+    
+    print id, expr
+
+def parse_ruleaction(node):
     pass
+
+    """
+rules
+  ruleassignment
+    target (trigger on...) (think this is useless)
+    ruleref (oid -> ruledef)
+      action (show, insert) (@ifexpressionevaluates)
+        run (ignore?)
+        destinationproperty (oid -> item?)
+  ruledef
+    expression (xpath-like)
+"""
 
 def pprint(o):
     def convert(o):
@@ -119,16 +156,8 @@ def pprint(o):
 if __name__ == "__main__":
 
     doc = ElementTree.parse(sys.stdin)
-    root = doc.getroot()
 
-    node = root.find(_('Study')).find(_('MetaDataVersion'))
+    forms = parse_study(doc.getroot())
 
-    codelists = parse_code_lists(node)
-    questions = parse_items(node, codelists)
-    groups = parse_groups(node, questions)
-    forms = parse_forms(node, groups)
-
-    parse_rules(node.find(_('Rules', 'ocr')))
-
-    pprint(forms)
+#    pprint(forms)
 
