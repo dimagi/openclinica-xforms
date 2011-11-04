@@ -2,4 +2,6 @@ syntax: glob
 
 *~
 *.pyc
+parsetab.py
+parser.out
 

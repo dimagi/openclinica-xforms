@@ -1,6 +1,7 @@
 from xml.etree import ElementTree
 import sys
 import collections
+import expr_parse
 
 Choice = collections.namedtuple('Choice', ['label', 'value'])
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
@@ -119,7 +120,8 @@ def parse_ruledef(node):
     id = node.attrib['OID']
     expr = node.find(_('Expression', 'ocr')).text
     
-    print id, expr
+    print id
+    print expr_parse.parse(expr)
 
 def parse_ruleaction(node):
     pass
