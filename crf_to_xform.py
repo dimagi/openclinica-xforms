@@ -1,5 +1,6 @@
 from xml.etree import ElementTree
 import sys
+import itertools
 import collections
 import expr_parse
 
@@ -8,6 +9,8 @@ ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'ch
 Question = collections.namedtuple('Question', ['id', 'name', 'datatype', 'label', 'choices'])
 QuestionGroup = collections.namedtuple('QuestionGroup', ['id', 'name', 'items'])
 Form = collections.namedtuple('Form', ['id', 'version', 'items'])
+RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
+Rule = collections.namedtuple('Rule', ['expr', 'action', 'target', 'set_val', 'trigger'])
 
 def _(tag, ns_prefix=None):
     namespace_uri = {
@@ -108,23 +111,47 @@ def parse_study(docroot):
     groups = parse_groups(node, questions)
     forms = parse_forms(node, groups)
 
-    parse_rules(node.find(_('Rules', 'ocr')))
+    rules = parse_rules(node.find(_('Rules', 'ocr')))
 
-    return forms
+    return forms, rules
 
 def parse_rules(node):
-    ruledefs = [parse_ruledef(n) for n in node.findall(_('RuleDef', 'ocr'))]
+    ruledefs = parse_ruledefs(node)
+    rules = list(itertools.chain(*(parse_ruleassn(n, ruledefs) for n in node.findall(_('RuleAssignment', 'ocr')))))
+    return rules
 
+def parse_ruledefs(node):
+    ruledefs = [parse_ruledef(n) for n in node.findall(_('RuleDef', 'ocr'))]
+    return dict((r.id, r) for r in ruledefs)
 
 def parse_ruledef(node):
     id = node.attrib['OID']
     expr = node.find(_('Expression', 'ocr')).text
-    
-    print id
-    print expr_parse.parse(expr)
+    return RuleDef(id, expr_parse.parse(expr))
 
-def parse_ruleaction(node):
-    pass
+def parse_ruleassn(node, ruledefs):
+    def actions(n):
+        return itertools.chain(*(n.findall(_(tag, 'ocr')) for tag in ['ShowAction', 'HideAction', 'InsertAction']))
+
+    def is_action(n, type):
+        return n.tag == _(type, 'ocr')
+
+    _trigger = node.find(_('Target', 'ocr')).text
+    for rr in node.findall(_('RuleRef', 'ocr')):
+        expr = ruledefs[rr.attrib['OID']].expr
+        for n_act in actions(rr):
+            action_type = 'relevancy' if not is_action(n_act, 'InsertAction') else 'calculate'
+            if_true = {'true': True, 'false': False}[n_act.attrib['IfExpressionEvaluates']]
+            if is_action(n_act, 'HideAction'):
+                if_true = not if_true
+            if not if_true:
+                expr = ('not', expr)
+
+            for n_dst in n_act.findall(_('DestinationProperty', 'ocr')):
+                dst = n_dst.attrib['OID']
+                set_val = n_dst.attrib['Value'] if is_action(n_act, 'InsertAction') else None
+
+                yield Rule(expr, action_type, dst, set_val, _trigger)
 
     """
 rules
@@ -159,7 +186,7 @@ if __name__ == "__main__":
 
     doc = ElementTree.parse(sys.stdin)
 
-    forms = parse_study(doc.getroot())
+    forms, rules = parse_study(doc.getroot())
 
-#    pprint(forms)
-
+    pprint(forms)
+    pprint(rules)
