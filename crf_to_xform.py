@@ -1,4 +1,5 @@
-from xml.etree import ElementTree
+from xml.etree import ElementTree as et
+from StringIO import StringIO
 import sys
 import itertools
 import collections
@@ -17,6 +18,9 @@ def _(tag, ns_prefix=None):
         None: 'http://www.cdisc.org/ns/odm/v1.3',
         'oc': 'http://www.openclinica.org/ns/odm_ext_v130/v3.1',
         'ocr': 'http://www.openclinica.org/ns/rules/v3.1',
+        'xf': 'http://www.w3.org/2002/xforms',
+        'h': 'http://www.w3.org/1999/xhtml',
+        'jr': 'http://openrosa.org/javarosa',
     }[ns_prefix]
     return '{%s}%s' % (namespace_uri, tag)
 
@@ -220,6 +224,73 @@ def expr_to_xpath(expr):
         }[expr[0]]
         return '%s %s %s' % (subexpr_to_xpath(expr[0], 'left', expr[1]), op, subexpr_to_xpath(expr[0], 'right', expr[2]))
 
+
+
+def build_xform(form, rules):
+    #todo: namespaces; register_namespace only supported in py2.7
+
+    root = et.Element(_('html', 'h'))
+    head = et.SubElement(root, _('head', 'h'))
+    body = et.SubElement(root, _('body', 'h'))
+
+    title = et.SubElement(head, _('title', 'h'))
+    title.text = form.id
+    model = et.SubElement(head, _('model', 'xf'))
+    build_model(model, form, rules)
+
+    build_body(body, form)
+
+    tree = et.ElementTree(root)
+    out = StringIO()
+    tree.write(out, encoding='utf-8')
+    return out.getvalue()
+
+def build_model(node, form, rules):
+    inst = et.SubElement(node, _('instance', 'xf'))
+    build_inst(inst, form)
+
+def _instname(n):
+    return '{inst}%s' % n.lower()
+
+def build_inst(parent_node, instance_item):
+    #todo: make a real instance xmlns
+    nodename = ('data' if isinstance(instance_item, Form) else instance_item.id) # or use name? are names guaranteed unique?
+    inst_node = et.SubElement(parent_node, _instname(nodename))
+    if hasattr(instance_item, 'items'):
+        for child in instance_item.items:
+            build_inst(inst_node, child)
+
+def build_body(node, form):
+    for child in form.items:
+        node.append(build_body_item(child))
+
+def build_body_item(item):
+    if hasattr(item, 'items'):
+        #group
+        node = et.Element(_('group', 'xf'))
+        node.attrib['ref'] = item.id.lower()
+        label = et.SubElement(node, _('label', 'xf'))
+        label.text = item.name
+        for child in item.items:
+            node.append(build_body_item(child))
+    else:
+        node = build_question(item)
+    return node
+
+def build_question(item):
+    q = et.Element(_('select1' if item.choices else 'input', 'xf'))
+    q.attrib['ref'] = item.id.lower()
+    label = et.SubElement(q, _('label', 'xf'))
+    label.text = item.label
+    if item.choices:
+        for choice in item.choices.choices:
+            ch = et.SubElement(q, _('item', 'xf'))
+            lab = et.SubElement(ch, _('label', 'xf'))
+            lab.text = choice.label
+            val = et.SubElement(ch, _('value', 'xf'))
+            val.text = str(choice.value)
+    return q
+
 def pprint(o):
     def convert(o):
         if hasattr(o, '__iter__'):
@@ -236,12 +307,17 @@ def pprint(o):
     pp = pprint.PrettyPrinter(indent=2)
     pp.pprint(convert(o))
     
+def pprintxml(xmlstr):
+    from lxml import etree as lx
+    print lx.tostring(lx.fromstring(xmlstr), pretty_print=True)
     
 if __name__ == "__main__":
 
-    doc = ElementTree.parse(sys.stdin)
+    doc = et.parse(sys.stdin)
 
     forms, rules = parse_study(doc.getroot())
 
-    pprint(forms)
-    pprint(rules)
+    #pprint(forms)
+    #pprint(rules)
+
+    pprintxml(build_xform(forms[0], rules))
