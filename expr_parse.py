@@ -61,7 +61,7 @@ precedence = (
     ('left', 'EQ', 'NEQ'),
     ('left', 'LT', 'LTE', 'GT', 'GTE'),
     ('left', 'PLUS', 'MINUS'),
-    ('left', 'MULT','DIV'),
+    ('left', 'MULT', 'DIV'),
     ('nonassoc', 'UMINUS'),
 )
 
@@ -98,7 +98,7 @@ def p_op_expr(t):
                | MINUS expr %prec UMINUS
     """
     if len(t) == 3:
-        t[0] = ('uminus', t[2])
+        t[0] = ('neg', t[2])
     else:
         try:
             op = {

@@ -165,6 +165,61 @@ rules
     expression (xpath-like)
 """
 
+def op_prec(operator):
+    """return (precedence level [higher == more-tightly bound], associativity) for an operator;
+    non-terminals have a higher precedence than all operators"""
+    prec = [
+        ('right', ['or']),
+        ('right', ['and']),
+        ('left', ['eq', 'neq']),
+        ('left', ['lt', 'lte', 'gt', 'gte']),
+        ('left', ['add', 'subtr']),
+        ('left', ['mult','div']),
+        (None, ['neg']),
+    ]
+    info = dict(itertools.chain(*[[(op, (i, assoc)) for op in ops] for i, (assoc, ops) in enumerate(prec)]))
+
+    try:
+        return info[operator]
+    except KeyError:
+        return (999, None)
+
+def needs_parens(parent_op, child_op, side):
+    """determine whether parens are needed around a child sub-expression"""
+    parent_prec, assoc = op_prec(parent_op)
+    child_prec, _ = op_prec(child_op)
+    return (parent_prec > child_prec or (parent_prec == child_prec and assoc != side))
+
+def subexpr_to_xpath(parent_op, side, subexpr):
+    return ('(%s)' if needs_parens(parent_op, subexpr[0], side) else '%s') % expr_to_xpath(subexpr)
+
+def expr_to_xpath(expr):
+    type = expr[0]
+    if type == 'numlit':
+        return expr[1]
+    elif type == 'strlit':
+        return "%s" % expr[1]
+    elif type == 'oid':
+        return '${%s}' % expr[1]
+    elif type == 'neg':
+        return '-%s' % subexpr_to_xpath(expr[0], None, expr[1])
+    else:
+        op = {
+            'add': '+',
+            'subtr': '-',
+            'mult': '*',
+            'div': 'div',
+            'eq': '=',
+            'neq': '!=',
+            'lt': '<',
+            'lte': '<=',
+            'gt': '>',
+            'gte': '>=',
+            'and': 'and',
+            'or': 'or',
+        }[expr[0]]
+        return '%s %s %s' % (subexpr_to_xpath(expr[0], 'left', expr[1]), op, subexpr_to_xpath(expr[0], 'right', expr[2]))
+
 def pprint(o):
     def convert(o):
         if hasattr(o, '__iter__'):
