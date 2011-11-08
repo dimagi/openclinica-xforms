@@ -7,11 +7,67 @@ import expr_parse
 
 Choice = collections.namedtuple('Choice', ['label', 'value'])
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
-Question = collections.namedtuple('Question', ['id', 'name', 'datatype', 'label', 'choices'])
-QuestionGroup = collections.namedtuple('QuestionGroup', ['id', 'name', 'items'])
-Form = collections.namedtuple('Form', ['id', 'version', 'items'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
 Rule = collections.namedtuple('Rule', ['expr', 'action', 'target', 'set_val', 'trigger'])
+
+class Question(object):
+    def __init__(self, id, name, datatype, label, choices):
+        self.id = id
+        self.name = name
+        self.datatype = datatype
+        self.label = label
+        self._ch = choices
+
+    def type(self):
+        if self.datatype == 'choice':
+            return 'select1' #can't handle multiselect yet
+        else:
+            try:
+                return {
+                    'integer': 'int',
+                    'float': 'float',
+                }[self.datatype]
+            except KeyError:
+                return 'str'
+
+    def choices(self):
+        return (self._ch.choices if self._ch else [])
+
+    def xf_control_type(self):
+        try:
+            return {
+                'select1': 'select1',
+                'selectmulti': 'select',
+            }[self.type()]
+        except KeyError:
+            return 'input'
+
+    def xf_datatype(self):
+        if self.type() in ('str', 'select1', 'selectmulti'):
+            return None
+        else:
+            return {'int': 'int', 'float': 'decimal'}[self.type()]
+
+    def xpathname(self):
+        return self.id.lower()
+
+class QuestionGroup(object):
+    def __init__(self, id, name, items):
+        self.id = id
+        self.name = name
+        self.items = items
+
+    def xpathname(self):
+        return self.id.lower()
+
+class Form(object):
+    def __init__(self, id, version, items):
+        self.id = id
+        self.version = version
+        self.items = items
+
+    def xpathname(self):
+        return 'data'
 
 def _(tag, ns_prefix=None):
     namespace_uri = {
@@ -194,17 +250,20 @@ def needs_parens(parent_op, child_op, side):
     child_prec, _ = op_prec(child_op)
     return (parent_prec > child_prec or (parent_prec == child_prec and assoc != side))
 
-def subexpr_to_xpath(parent_op, side, subexpr):
-    return ('(%s)' if needs_parens(parent_op, subexpr[0], side) else '%s') % expr_to_xpath(subexpr)
+def expr_to_xpath(expr, oid_to_ref):
 
-def expr_to_xpath(expr):
+    def subexpr_to_xpath(side):
+        parent_op = expr[0]
+        subexpr = expr[{'left': 1, 'right': 2}[side]]
+        return ('(%s)' if needs_parens(parent_op, subexpr[0], side) else '%s') % expr_to_xpath(subexpr, oid_to_ref)
+
     type = expr[0]
     if type == 'numlit':
         return expr[1]
     elif type == 'strlit':
         return "%s" % expr[1]
     elif type == 'oid':
-        return '${%s}' % expr[1]
+        return oid_to_ref(expr[1])
     elif type == 'neg':
         return '-%s' % subexpr_to_xpath(expr[0], None, expr[1])
     else:
@@ -222,9 +281,7 @@ def expr_to_xpath(expr):
             'and': 'and',
             'or': 'or',
         }[expr[0]]
-        return '%s %s %s' % (subexpr_to_xpath(expr[0], 'left', expr[1]), op, subexpr_to_xpath(expr[0], 'right', expr[2]))
-
-
+        return '%s %s %s' % (subexpr_to_xpath('left'), op, subexpr_to_xpath('right'))
 
 def build_xform(form, rules):
     #todo: namespaces; register_namespace only supported in py2.7
@@ -248,14 +305,74 @@ def build_xform(form, rules):
 def build_model(node, form, rules):
     inst = et.SubElement(node, _('instance', 'xf'))
     build_inst(inst, form)
+    build_binds(node, form, rules)
 
-def _instname(n):
-    return '{inst}%s' % n.lower()
+def build_binds(node, form, rules):
+    for o in _all_instance_nodes(form):
+        bind = et.Element(_('bind', 'xf'))
+        bind.attrib['nodeset'] = xpathref(o.id, form)
+
+        needs_bind = False
+        if isinstance(o, Question) and o.xf_datatype():
+            bind.attrib['type'] = o.xf_datatype()
+            needs_bind = True
+
+        if build_bind_rules(bind, o, rules, form):
+            needs_bind = True
+
+        if needs_bind:
+            node.append(bind)
+
+def build_bind_rules(bind, o, rules, form):
+
+    def oid_to_ref(oid):
+        if '.' in oid:
+            raise Exception('don\'t support compound oids yet')
+        return xpathref(oid, form)
+
+    matching_rules = [r for r in rules if r.target == o.id]
+
+    if len(matching_rules) > 1:
+        sys.stderr.write('item [%s] with more than one rule -- not supported yet\n' % o.id)
+    rule = (matching_rules[0] if matching_rules else None)
+
+    if not rule:
+        return False
+
+    if rule.action == 'calculate':
+        sys.stderr.write('calculate rules not supported yet\n')
+        return False
+
+    #todo: warning if 'trigger' does not appear in expr
+
+    bind.attrib['relevant'] = expr_to_xpath(rule.expr, oid_to_ref)
+    return True
+
+noderefs = {}
+def xpathref(oid, form):
+    if not noderefs:
+        noderefs.update(gen_refs(form))
+
+    return noderefs[oid]
+    
+def gen_refs(o, path=['']):
+    path.append(o.xpathname())
+    yield (o.id, '/'.join(path))
+    if hasattr(o, 'items'):
+        for child in o.items:
+            for entry in gen_refs(child, list(path)):
+                yield entry
+
+def _all_instance_nodes(o):
+    if hasattr(o, 'items'):
+        for child in o.items:
+            yield child
+            for node in _all_instance_nodes(child):
+                yield node
 
 def build_inst(parent_node, instance_item):
     #todo: make a real instance xmlns
-    nodename = ('data' if isinstance(instance_item, Form) else instance_item.id) # or use name? are names guaranteed unique?
-    inst_node = et.SubElement(parent_node, _instname(nodename))
+    inst_node = et.SubElement(parent_node, '{inst}%s' % instance_item.xpathname())
     if hasattr(instance_item, 'items'):
         for child in instance_item.items:
             build_inst(inst_node, child)
@@ -268,7 +385,7 @@ def build_body_item(item):
     if hasattr(item, 'items'):
         #group
         node = et.Element(_('group', 'xf'))
-        node.attrib['ref'] = item.id.lower()
+        node.attrib['ref'] = item.xpathname()
         label = et.SubElement(node, _('label', 'xf'))
         label.text = item.name
         for child in item.items:
@@ -278,17 +395,16 @@ def build_body_item(item):
     return node
 
 def build_question(item):
-    q = et.Element(_('select1' if item.choices else 'input', 'xf'))
-    q.attrib['ref'] = item.id.lower()
+    q = et.Element(_(item.xf_control_type(), 'xf'))
+    q.attrib['ref'] = item.xpathname()
     label = et.SubElement(q, _('label', 'xf'))
     label.text = item.label
-    if item.choices:
-        for choice in item.choices.choices:
-            ch = et.SubElement(q, _('item', 'xf'))
-            lab = et.SubElement(ch, _('label', 'xf'))
-            lab.text = choice.label
-            val = et.SubElement(ch, _('value', 'xf'))
-            val.text = str(choice.value)
+    for choice in item.choices():
+        ch = et.SubElement(q, _('item', 'xf'))
+        lab = et.SubElement(ch, _('label', 'xf'))
+        lab.text = choice.label
+        val = et.SubElement(ch, _('value', 'xf'))
+        val.text = str(choice.value)
     return q
 
 def pprint(o):
@@ -300,6 +416,8 @@ def pprint(o):
                 return dict((k, convert(v)) for k, v in o.iteritems())
             else:
                 return [convert(e) for e in o]
+        elif hasattr(o, '__dict__'):
+            return convert(o.__dict__)
         else:
             return o
 
