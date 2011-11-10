@@ -4,6 +4,9 @@ import sys
 import itertools
 import collections
 import expr_parse
+import hashlib
+import os.path
+from subprocess import Popen, PIPE
 
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
@@ -388,7 +391,7 @@ def _all_instance_nodes(o):
 
 def build_inst(parent_node, instance_item):
     #todo: make a real instance xmlns
-    xmlns = 'http://dimagi.com/oc-uconn-prototype/'
+    xmlns = 'None' #'http://dimagi.com/oc-uconn-prototype/'
     inst_node = et.SubElement(parent_node, '{%s}%s' % (xmlns, instance_item.xpathname()))
     if hasattr(instance_item, 'items'):
         for child in instance_item.items:
@@ -416,6 +419,20 @@ def build_itext_entry(parent_node, ref, text):
     n.attrib['id'] = ref
     v = et.SubElement(n, _('value', 'xf'))
     v.text = text
+
+    MEDIA_DIR = '/home/drew/tmp/uconn_media'
+
+    textbytes = text.encode('utf-8')
+    filename = '%s.mp3' % hashlib.sha1(textbytes).hexdigest()[:16]
+    path = os.path.join(MEDIA_DIR, filename)
+    if not os.path.exists(path):
+        sys.stderr.write('generating audio for [%s]\n' % text[:30])
+        p = Popen('text2wave | lame --quiet -V2 - %s' % path, shell=True, stdin=PIPE)
+        p.communicate(textbytes)
+
+    vaud = et.SubElement(n, _('value', 'xf'))
+    vaud.attrib['form'] = 'audio'
+    vaud.text = 'jr://audio/%s' % filename
 
 def build_body(node, form):
     for child in form.items:
