@@ -17,6 +17,7 @@ class Question(object):
         self.datatype = datatype
         self.label = label
         self._ch = choices
+        self.required = None
 
     def type(self):
         if self.datatype == 'choice':
@@ -134,9 +135,13 @@ def parse_groups(root, items):
 def parse_group(group_node, items):
     id = group_node.attrib['OID']
     name = group_node.attrib['Name']
-
     child_nodes = sorted(group_node.findall(_('ItemRef')), key=lambda node: int(node.attrib['OrderNumber']))
-    children = [items[c.attrib['ItemOID']] for c in child_nodes]
+
+    def get_child(itemrefnode):
+        child = items[itemrefnode.attrib['ItemOID']]
+        child.required = (itemrefnode.attrib['Mandatory'].lower() == 'yes')
+        return child
+    children = [get_child(c) for c in child_nodes]
 
     return QuestionGroup(id, name, children)
 
@@ -316,8 +321,7 @@ def build_binds(node, form, rules):
             if o.xf_datatype():
                 bind.attrib['type'] = o.xf_datatype()
 
-            required = True
-            if required:
+            if o.required:
                 bind.attrib['required'] = 'true()'
 
         build_bind_rules(bind, o, rules, form)
@@ -383,6 +387,10 @@ def build_inst(parent_node, instance_item):
 
 def build_body(node, form):
     for child in form.items:
+        #temp
+        if child.id == 'IG_CPCS_LITERACY':
+            continue
+
         node.append(build_body_item(child))
 
 def build_body_item(item):
@@ -439,7 +447,7 @@ if __name__ == "__main__":
 
     forms, rules = parse_study(doc.getroot())
 
-#    pprint(forms)
-#    pprint(rules)
+    #pprint(forms)
+    #pprint(rules)
 
     pprintxml(build_xform(forms[0], rules))
