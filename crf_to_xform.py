@@ -312,14 +312,17 @@ def build_binds(node, form, rules):
         bind = et.Element(_('bind', 'xf'))
         bind.attrib['nodeset'] = xpathref(o.id, form)
 
-        needs_bind = False
-        if isinstance(o, Question) and o.xf_datatype():
-            bind.attrib['type'] = o.xf_datatype()
-            needs_bind = True
+        if isinstance(o, Question):
+            if o.xf_datatype():
+                bind.attrib['type'] = o.xf_datatype()
 
-        if build_bind_rules(bind, o, rules, form):
-            needs_bind = True
+            required = True
+            if required:
+                bind.attrib['required'] = 'true()'
 
+        build_bind_rules(bind, o, rules, form)
+
+        needs_bind = bool(set(bind.attrib.keys()) - set(['nodeset']))
         if needs_bind:
             node.append(bind)
 
@@ -372,7 +375,8 @@ def _all_instance_nodes(o):
 
 def build_inst(parent_node, instance_item):
     #todo: make a real instance xmlns
-    inst_node = et.SubElement(parent_node, '{inst}%s' % instance_item.xpathname())
+    xmlns = 'http://dimagi.com/oc-uconn-prototype/'
+    inst_node = et.SubElement(parent_node, '{%s}%s' % (xmlns, instance_item.xpathname()))
     if hasattr(instance_item, 'items'):
         for child in instance_item.items:
             build_inst(inst_node, child)
@@ -435,7 +439,7 @@ if __name__ == "__main__":
 
     forms, rules = parse_study(doc.getroot())
 
-    #pprint(forms)
-    #pprint(rules)
+#    pprint(forms)
+#    pprint(rules)
 
     pprintxml(build_xform(forms[0], rules))
