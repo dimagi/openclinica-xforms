@@ -5,10 +5,15 @@ import itertools
 import collections
 import expr_parse
 
-Choice = collections.namedtuple('Choice', ['label', 'value'])
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
 Rule = collections.namedtuple('Rule', ['expr', 'action', 'target', 'set_val', 'trigger'])
+
+class Choice(object):
+    def __init__(self, label, value):
+        self.label = label
+        self.value = value
+        self.ref_id = None
 
 class Question(object):
     def __init__(self, id, name, datatype, label, choices):
@@ -32,7 +37,10 @@ class Question(object):
                 return 'str'
 
     def choices(self):
-        return (self._ch.choices if self._ch else [])
+        if self._ch:
+            for i, ch in enumerate(self._ch.choices):
+                ch.ref_id = '%s#%d' % (self._ch.id, i + 1)
+                yield ch
 
     def xf_control_type(self):
         try:
@@ -311,6 +319,7 @@ def build_model(node, form, rules):
     inst = et.SubElement(node, _('instance', 'xf'))
     build_inst(inst, form)
     build_binds(node, form, rules)
+    build_itext(node, form)
 
 def build_binds(node, form, rules):
     for o in _all_instance_nodes(form):
@@ -385,6 +394,29 @@ def build_inst(parent_node, instance_item):
         for child in instance_item.items:
             build_inst(inst_node, child)
 
+def build_itext(parent_node, form):
+    itext = et.SubElement(parent_node, _('itext', 'xf'))
+    lang = et.SubElement(itext, _('translation', 'xf'))
+    lang.attrib.update({'lang': 'English', 'default': ''})
+
+    def gen_idict():
+        for o in _all_instance_nodes(form):
+            if isinstance(o, Question):
+                yield (o.id, o.label)
+                for ch in o.choices():
+                    yield (ch.ref_id, ch.label)
+            else:
+                yield (o.id, o.name)
+    idict = dict(gen_idict())
+    for k, v in sorted(idict.iteritems()):
+        build_itext_entry(lang, k, v)
+
+def build_itext_entry(parent_node, ref, text):
+    n = et.SubElement(parent_node, _('text', 'xf'))
+    n.attrib['id'] = ref
+    v = et.SubElement(n, _('value', 'xf'))
+    v.text = text
+
 def build_body(node, form):
     for child in form.items:
         #temp
@@ -398,8 +430,7 @@ def build_body_item(item):
         #group
         node = et.Element(_('group', 'xf'))
         node.attrib['ref'] = item.xpathname()
-        label = et.SubElement(node, _('label', 'xf'))
-        label.text = item.name
+        make_label(node, item.id)
         for child in item.items:
             node.append(build_body_item(child))
     else:
@@ -409,15 +440,23 @@ def build_body_item(item):
 def build_question(item):
     q = et.Element(_(item.xf_control_type(), 'xf'))
     q.attrib['ref'] = item.xpathname()
-    label = et.SubElement(q, _('label', 'xf'))
-    label.text = item.label
+    make_label(q, item.id)
     for choice in item.choices():
         ch = et.SubElement(q, _('item', 'xf'))
-        lab = et.SubElement(ch, _('label', 'xf'))
-        lab.text = choice.label
+        make_label(ch, choice.ref_id, choice.label)
         val = et.SubElement(ch, _('value', 'xf'))
         val.text = str(choice.value)
     return q
+
+def make_label(parent, key=None, inline=None):
+    label = et.SubElement(parent, _('label', 'xf'))
+    if key:
+        label.attrib['ref'] = itext(key)
+    if inline:
+        label.text = inline
+
+def itext(key):
+    return 'jr:itext(\'%s\')' % key
 
 def pprint(o):
     def convert(o):
@@ -447,7 +486,7 @@ if __name__ == "__main__":
 
     forms, rules = parse_study(doc.getroot())
 
-    #pprint(forms)
-    #pprint(rules)
+#    pprint(forms)
+#    pprint(rules)
 
     pprintxml(build_xform(forms[0], rules))
