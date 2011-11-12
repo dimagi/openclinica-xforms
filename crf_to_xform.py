@@ -7,6 +7,7 @@ import expr_parse
 import hashlib
 import os.path
 from subprocess import Popen, PIPE
+import csv
 
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
@@ -401,8 +402,6 @@ DEFAULT_LANG = 'en'
 
 def build_itext(parent_node, form):
     itext = et.SubElement(parent_node, _('itext', 'xf'))
-    lang = et.SubElement(itext, _('translation', 'xf'))
-    lang.attrib.update({'lang': DEFAULT_LANG, 'default': ''})
 
     def gen_idict():
         for o in _all_instance_nodes(form):
@@ -412,9 +411,35 @@ def build_itext(parent_node, form):
                     yield (ch.ref_id, ch.label)
             else:
                 yield (o.id, o.name)
-    idict = dict(gen_idict())
+    ref_idict = dict(gen_idict())
+    build_itext_lang(itext, DEFAULT_LANG, ref_idict)
+
+    # dump csv for manual translation
+    with open('itext_dump.csv', 'w') as f:
+        writer = csv.writer(f)
+        for k, v in sorted(ref_idict.iteritems()):
+            writer.writerow([k, v.encode('utf-8')])
+        
+    # load in externally-supplied translations for other languages
+    try:
+        with open('translation.csv') as f:
+            reader = csv.DictReader(f)
+            langs = [k.lower() for k in reader.fieldnames if k.lower() not in ('key', DEFAULT_LANG)]
+            data = list(reader)
+            for lang in langs:
+                idict = dict((row['KEY'], unicode(row[lang.upper()], 'utf-8')) for row in data)
+                build_itext_lang(itext, lang, idict)
+    except IOError:
+        sys.stderr.write('additional translations not available\n')
+
+def build_itext_lang(parent_node, lang, idict):
+    node_lang = et.SubElement(parent_node, _('translation', 'xf'))
+    node_lang.attrib['lang'] = lang
+    if lang == DEFAULT_LANG:
+        node_lang.attrib['default'] = ''
+
     for k, v in sorted(idict.iteritems()):
-        build_itext_entry(lang, k, v)
+        build_itext_entry(node_lang, k, v)
 
 def build_itext_entry(parent_node, ref, text):
     n = et.SubElement(parent_node, _('text', 'xf'))
@@ -426,7 +451,6 @@ def build_itext_entry(parent_node, ref, text):
     vaud = et.SubElement(n, _('value', 'xf'))
     vaud.attrib['form'] = 'audio'
     vaud.text = 'jrtts://'
-
 
 def build_body(node, form):
     for child in form.items:
