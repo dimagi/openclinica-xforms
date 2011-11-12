@@ -397,10 +397,12 @@ def build_inst(parent_node, instance_item):
         for child in instance_item.items:
             build_inst(inst_node, child)
 
+DEFAULT_LANG = 'en'
+
 def build_itext(parent_node, form):
     itext = et.SubElement(parent_node, _('itext', 'xf'))
     lang = et.SubElement(itext, _('translation', 'xf'))
-    lang.attrib.update({'lang': 'English', 'default': ''})
+    lang.attrib.update({'lang': DEFAULT_LANG, 'default': ''})
 
     def gen_idict():
         for o in _all_instance_nodes(form):
@@ -420,19 +422,11 @@ def build_itext_entry(parent_node, ref, text):
     v = et.SubElement(n, _('value', 'xf'))
     v.text = text
 
-    MEDIA_DIR = '/home/drew/tmp/uconn_media'
-
-    textbytes = text.encode('utf-8')
-    filename = '%s.mp3' % hashlib.sha1(textbytes).hexdigest()[:16]
-    path = os.path.join(MEDIA_DIR, filename)
-    if not os.path.exists(path):
-        sys.stderr.write('generating audio for [%s]\n' % text[:30])
-        p = Popen('text2wave | lame --quiet -V2 - %s' % path, shell=True, stdin=PIPE)
-        p.communicate(textbytes)
-
+    # temp
     vaud = et.SubElement(n, _('value', 'xf'))
     vaud.attrib['form'] = 'audio'
-    vaud.text = 'jr://audio/%s' % filename
+    vaud.text = 'jrtts://'
+
 
 def build_body(node, form):
     for child in form.items:
@@ -496,6 +490,27 @@ def pprint(o):
 def pprintxml(xmlstr):
     from lxml import etree as lx
     print lx.tostring(lx.fromstring(xmlstr), pretty_print=True)
+
+
+
+
+# utility code
+def create_audio(text, lang):
+    MEDIA_DIR = '/home/drew/tmp/uconn_media'
+
+    textbytes = text.encode('utf-8')
+    filename = '%s.mp3' % hashlib.sha1(lang + ':' + textbytes).hexdigest()[:16]
+    path = os.path.join(MEDIA_DIR, filename)
+    if not os.path.exists(path):
+        sys.stderr.write('generating audio for [%s]\n' % text[:30])
+        p = Popen('text2wave | lame --quiet -V2 - %s' % path, shell=True, stdin=PIPE)
+        p.communicate(textbytes)
+
+    return 'jr://audio/%s' % filename
+
+
+
+
     
 if __name__ == "__main__":
 
@@ -507,3 +522,7 @@ if __name__ == "__main__":
 #    pprint(rules)
 
     pprintxml(build_xform(forms[0], rules))
+
+
+
+
