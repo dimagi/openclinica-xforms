@@ -62,7 +62,7 @@ class Question(object):
             return {'int': 'int', 'float': 'decimal'}[self.type()]
 
     def xpathname(self):
-        return self.id.lower()
+        return self.id
 
 class QuestionGroup(object):
     def __init__(self, id, name, items):
@@ -71,7 +71,7 @@ class QuestionGroup(object):
         self.items = items
 
     def xpathname(self):
-        return self.id.lower()
+        return self.id
 
 class Form(object):
     def __init__(self, id, version, items):
@@ -80,7 +80,7 @@ class Form(object):
         self.items = items
 
     def xpathname(self):
-        return 'data'
+        return self.version
 
 def _(tag, ns_prefix=None):
     namespace_uri = {
@@ -181,7 +181,11 @@ def form_info(studyevent, formdefs):
     return {'id': id, 'version': latest_version, 'node': form_node}
 
 def parse_study(docroot):
-    node = docroot.find(_('Study')).find(_('MetaDataVersion'))
+    study = docroot.find(_('Study'))
+    study_id = study.attrib['OID']
+
+    node = study.find(_('MetaDataVersion'))
+    mdv = node.attrib['OID']
 
     codelists = parse_code_lists(node)
     questions = parse_items(node, codelists)
@@ -190,7 +194,7 @@ def parse_study(docroot):
 
     rules = parse_rules(node.find(_('Rules', 'ocr')))
 
-    return forms, rules
+    return (study_id, mdv), forms, rules
 
 def parse_rules(node):
     ruledefs = parse_ruledefs(node)
@@ -229,18 +233,6 @@ def parse_ruleassn(node, ruledefs):
                 set_val = n_dst.attrib['Value'] if is_action(n_act, 'InsertAction') else None
 
                 yield Rule(expr, action_type, dst, set_val, _trigger)
-
-    """
-rules
-  ruleassignment
-    target (trigger on...) (think this is useless)
-    ruleref (oid -> ruledef)
-      action (show, insert) (@ifexpressionevaluates)
-        run (ignore?)
-        destinationproperty (oid -> item?)
-  ruledef
-    expression (xpath-like)
-"""
 
 def op_prec(operator):
     """return (precedence level [higher == more-tightly bound], associativity) for an operator;
@@ -300,7 +292,7 @@ def expr_to_xpath(expr, oid_to_ref):
         }[expr[0]]
         return '%s %s %s' % (subexpr_to_xpath('left'), op, subexpr_to_xpath('right'))
 
-def build_xform(form, rules):
+def build_xform(metadata, form, rules):
     #todo: namespaces; register_namespace only supported in py2.7
 
     root = et.Element(_('html', 'h'))
@@ -308,9 +300,9 @@ def build_xform(form, rules):
     body = et.SubElement(root, _('body', 'h'))
 
     title = et.SubElement(head, _('title', 'h'))
-    title.text = form.id
+    title.text = '%s :: %s' % (form.id, form.version)
     model = et.SubElement(head, _('model', 'xf'))
-    build_model(model, form, rules)
+    build_model(metadata, model, form, rules)
 
     build_body(body, form)
 
@@ -319,9 +311,9 @@ def build_xform(form, rules):
     tree.write(out, encoding='utf-8')
     return out.getvalue()
 
-def build_model(node, form, rules):
+def build_model(metadata, node, form, rules):
     inst = et.SubElement(node, _('instance', 'xf'))
-    build_inst(inst, form)
+    _build_inst(inst, form, metadata)
     build_binds(node, form, rules)
     build_itext(node, form)
 
@@ -390,13 +382,15 @@ def _all_instance_nodes(o):
             for node in _all_instance_nodes(child):
                 yield node
 
-def build_inst(parent_node, instance_item):
-    #todo: make a real instance xmlns
-    xmlns = 'None' #'http://dimagi.com/oc-uconn-prototype/'
+def _build_inst(inst_node, form, metadata):
+    xmlns = 'http://openclinica.org/xform/%s/%s/%s/' % (metadata[0], metadata[1], form.id)
+    build_inst(inst_node, form, xmlns)
+
+def build_inst(parent_node, instance_item, xmlns):
     inst_node = et.SubElement(parent_node, '{%s}%s' % (xmlns, instance_item.xpathname()))
     if hasattr(instance_item, 'items'):
         for child in instance_item.items:
-            build_inst(inst_node, child)
+            build_inst(inst_node, child, xmlns)
 
 DEFAULT_LANG = 'en'
 
@@ -540,12 +534,12 @@ if __name__ == "__main__":
 
     doc = et.parse(sys.stdin)
 
-    forms, rules = parse_study(doc.getroot())
+    study_id, forms, rules = parse_study(doc.getroot())
 
 #    pprint(forms)
 #    pprint(rules)
 
-    pprintxml(build_xform(forms[0], rules))
+    pprintxml(build_xform(study_id, forms[0], rules))
 
 
 
