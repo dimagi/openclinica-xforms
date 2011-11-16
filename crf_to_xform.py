@@ -8,6 +8,7 @@ import hashlib
 import os.path
 from subprocess import Popen, PIPE
 import csv
+from optparse import OptionParser
 
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
@@ -292,7 +293,7 @@ def expr_to_xpath(expr, oid_to_ref):
         }[expr[0]]
         return '%s %s %s' % (subexpr_to_xpath('left'), op, subexpr_to_xpath('right'))
 
-def build_xform(metadata, form, rules):
+def build_xform(metadata, form, rules, options):
     #todo: namespaces; register_namespace only supported in py2.7
 
     root = et.Element(_('html', 'h'))
@@ -302,23 +303,17 @@ def build_xform(metadata, form, rules):
     title = et.SubElement(head, _('title', 'h'))
     title.text = '%s :: %s' % (form.id, form.version)
     model = et.SubElement(head, _('model', 'xf'))
-    build_model(metadata, model, form, rules)
+    build_model(model, form, rules, metadata, options)
 
     build_body(body, form)
 
-    return dump_xml(root)
+    return root
 
-def dump_xml(root):
-    tree = et.ElementTree(root)
-    out = StringIO()
-    tree.write(out, encoding='utf-8')
-    return out.getvalue()
-    
-def build_model(metadata, node, form, rules):
+def build_model(node, form, rules, metadata, options):
     inst = et.SubElement(node, _('instance', 'xf'))
     _build_inst(inst, form, metadata)
     build_binds(node, form, rules)
-    build_itext(node, form)
+    build_itext(node, form, options)
 
 def build_binds(node, form, rules):
     for o in _all_instance_nodes(form):
@@ -397,7 +392,7 @@ def build_inst(parent_node, instance_item, xmlns):
 
 DEFAULT_LANG = 'en'
 
-def build_itext(parent_node, form):
+def build_itext(parent_node, form, options):
     itext = et.SubElement(parent_node, _('itext', 'xf'))
 
     def gen_idict():
@@ -412,16 +407,20 @@ def build_itext(parent_node, form):
     build_itext_lang(itext, DEFAULT_LANG, ref_idict)
 
     # dump csv for manual translation
-    with open('itext_dump.csv', 'w') as f:
-        writer = csv.writer(f)
-        for k, v in sorted(ref_idict.iteritems()):
-            writer.writerow([k, v.encode('utf-8')])
-        
+    if options.dumptx:
+        dumpfile = 'itext_dump.csv'
+        sys.stderr.write('dumping text to %s\n' % dumpfile)
+        with open(dumpfile, 'w') as f:
+            writer = csv.writer(f)
+            for k, v in sorted(ref_idict.iteritems()):
+                writer.writerow([k, v.encode('utf-8')])
+    
     # load in externally-supplied translations for other languages
-    try:
-        with open('translation.csv') as f:
+    if options.translations:
+        with open(options.translations) as f:
             reader = csv.DictReader(f)
             langs = [k.lower() for k in reader.fieldnames if k.lower() not in ('key', DEFAULT_LANG)]
+            sys.stderr.write('additional locales: %s\n' % str(langs))
             data = list(reader)
             for lang in langs:
                 idict = dict((row['KEY'], unicode(row[lang.upper()], 'utf-8')) for row in data)
@@ -434,8 +433,6 @@ def build_itext(parent_node, form):
                     sys.stderr.write('locale %s defines unknown translations for %s\n' % (lang, str(sorted(mapping_addtl))))
 
                 build_itext_lang(itext, lang, idict)
-    except IOError:
-        sys.stderr.write('additional translations not available\n')
 
 def build_itext_lang(parent_node, lang, idict):
     node_lang = et.SubElement(parent_node, _('translation', 'xf'))
@@ -537,20 +534,36 @@ def create_audio(text, lang):
 
     return 'jr://audio/%s' % filename
 
-
-
-
-    
-if __name__ == "__main__":
-
-    doc = et.parse(sys.stdin)
-
+def convert_xform(f, options):
+    doc = et.parse(f)
     study_id, forms, rules = parse_study(doc.getroot())
 
 #    pprint(forms)
 #    pprint(rules)
 
-    pprintxml(build_xform(study_id, forms[0], rules))
+    xform = build_xform(study_id, forms[0], rules, options)
+    return dump_xml(xform)
+
+def dump_xml(root):
+    tree = et.ElementTree(root)
+    out = StringIO()
+    tree.write(out, encoding='utf-8')
+    return out.getvalue()
+    
+
+    
+if __name__ == "__main__":
+
+    parser = OptionParser()
+    parser.add_option("-t", "--translations", dest="translations",
+                      help="load translations from FILE", metavar="FILE")
+    parser.add_option("-d", "--dumptext", action="store_true", dest="dumptx", default=False,
+                      help="dump english text to csv for translation")
+
+    (options, args) = parser.parse_args()
+
+    with open(args[0]) as f:
+        pprintxml(convert_xform(f, options))
 
 
 
