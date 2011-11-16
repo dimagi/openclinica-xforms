@@ -1,7 +1,8 @@
-from crf_to_xform import _, dump_xml, pprintxml
+from crf_to_xform import _, dump_xml, pprintxml, convert_xform
 from xml.etree import ElementTree as et
 import sys
 import re
+from optparse import OptionParser
 
 def parse_metadata(root):
     m = re.match(r'\{.+/(?P<study>[^/]+)/(?P<mdv>[^/]+)/(?P<studyevent>[^/]+)/?\}(?P<form>.+)', root.tag)
@@ -29,7 +30,7 @@ def build_submission(root):
 
     convert_instance(root, seevtdata, True)
 
-    return dump_xml(odm)
+    return odm
 
 def convert_instance(in_node, out_node, root=False):
     name = in_node.tag.split('}')[-1]
@@ -51,8 +52,29 @@ def convert_instance(in_node, out_node, root=False):
         q.attrib['ItemOID'] = name
         q.attrib['Value'] = (in_node.text or '')
 
+def convert_odm(f, source):
+    print source.tag
+
+
+    doc = et.parse(f)
+    return build_submission(doc.getroot())
+
 if __name__ == "__main__":
     
-    doc = et.parse(sys.stdin)
+    parser = OptionParser()
+    parser.add_option("-x", "--xform", dest="xform",
+                      help="source xform", metavar="FILE")
+    parser.add_option("-f", "--crf", dest="crf",
+                      help="source CRF", metavar="FILE")
 
-    pprintxml(build_submission(doc.getroot()))
+    (options, args) = parser.parse_args()
+   
+    with open(options.xform or options.crf) as f:
+        if options.xform:
+            source = et.parse(f).getroot()
+        else:
+            source = convert_xform(f)
+
+    inst = (sys.stdin if args[0] == '-' else open(args[0]))
+    pprintxml(dump_xml(convert_odm(inst, source)))
+

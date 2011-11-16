@@ -407,7 +407,7 @@ def build_itext(parent_node, form, options):
     build_itext_lang(itext, DEFAULT_LANG, ref_idict)
 
     # dump csv for manual translation
-    if options.dumptx:
+    if options['dumptx']:
         dumpfile = 'itext_dump.csv'
         sys.stderr.write('dumping text to %s\n' % dumpfile)
         with open(dumpfile, 'w') as f:
@@ -416,8 +416,8 @@ def build_itext(parent_node, form, options):
                 writer.writerow([k, v.encode('utf-8')])
     
     # load in externally-supplied translations for other languages
-    if options.translations:
-        with open(options.translations) as f:
+    if options['translations']:
+        with open(options['translations']) as f:
             reader = csv.DictReader(f)
             langs = [k.lower() for k in reader.fieldnames if k.lower() not in ('key', DEFAULT_LANG)]
             sys.stderr.write('additional locales: %s\n' % str(langs))
@@ -534,15 +534,14 @@ def create_audio(text, lang):
 
     return 'jr://audio/%s' % filename
 
-def convert_xform(f, options):
+def convert_xform(f, options={'dumptx': False, 'translations': None}):
     doc = et.parse(f)
     study_id, forms, rules = parse_study(doc.getroot())
 
 #    pprint(forms)
 #    pprint(rules)
 
-    xform = build_xform(study_id, forms[0], rules, options)
-    return dump_xml(xform)
+    return build_xform(study_id, forms[0], rules, options)
 
 def dump_xml(root):
     tree = et.ElementTree(root)
@@ -562,8 +561,8 @@ if __name__ == "__main__":
 
     (options, args) = parser.parse_args()
 
-    with open(args[0]) as f:
-        pprintxml(convert_xform(f, options))
+    crf = (sys.stdin if args[0] == '-' else open(args[0]))
+    pprintxml(dump_xml(convert_xform(crf, options.__dict__)))
 
 
 
