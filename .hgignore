@@ -4,4 +4,4 @@ syntax: glob
 *.pyc
 parsetab.py
 parser.out
-
+itext_dump.csv

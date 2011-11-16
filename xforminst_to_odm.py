@@ -10,6 +10,8 @@ def parse_metadata(root):
 def build_submission(root):
     metadata = parse_metadata(root)
 
+    # need to reconcile instance
+
     #debug
     subject = ('SS_TESTSUBJ', 'test subject')
 
