@@ -306,11 +306,14 @@ def build_xform(metadata, form, rules):
 
     build_body(body, form)
 
+    return dump_xml(root)
+
+def dump_xml(root):
     tree = et.ElementTree(root)
     out = StringIO()
     tree.write(out, encoding='utf-8')
     return out.getvalue()
-
+    
 def build_model(metadata, node, form, rules):
     inst = et.SubElement(node, _('instance', 'xf'))
     _build_inst(inst, form, metadata)
@@ -422,6 +425,14 @@ def build_itext(parent_node, form):
             data = list(reader)
             for lang in langs:
                 idict = dict((row['KEY'], unicode(row[lang.upper()], 'utf-8')) for row in data)
+
+                mapping_missing = set(ref_idict) - set(idict)
+                mapping_addtl = set(idict) - set(ref_idict)
+                if mapping_missing:
+                    sys.stderr.write('locale %s does not define translations for %s\n' % (lang, str(sorted(mapping_missing))))
+                if mapping_addtl:
+                    sys.stderr.write('locale %s defines unknown translations for %s\n' % (lang, str(sorted(mapping_addtl))))
+
                 build_itext_lang(itext, lang, idict)
     except IOError:
         sys.stderr.write('additional translations not available\n')
