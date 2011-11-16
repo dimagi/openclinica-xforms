@@ -257,13 +257,13 @@ def needs_parens(parent_op, child_op, side):
     """determine whether parens are needed around a child sub-expression"""
     parent_prec, assoc = op_prec(parent_op)
     child_prec, _ = op_prec(child_op)
-    return (parent_prec > child_prec or (parent_prec == child_prec and assoc != side))
+    return (parent_prec > child_prec or (parent_prec == child_prec and side != 'unary' and assoc != side))
 
 def expr_to_xpath(expr, oid_to_ref):
 
     def subexpr_to_xpath(side):
         parent_op = expr[0]
-        subexpr = expr[{'left': 1, 'right': 2}[side]]
+        subexpr = expr[{'left': 1, 'right': 2, 'unary': 1}[side]]
         return ('(%s)' if needs_parens(parent_op, subexpr[0], side) else '%s') % expr_to_xpath(subexpr, oid_to_ref)
 
     type = expr[0]
@@ -274,7 +274,7 @@ def expr_to_xpath(expr, oid_to_ref):
     elif type == 'oid':
         return oid_to_ref(expr[1])
     elif type == 'neg':
-        return '-%s' % subexpr_to_xpath(expr[0], None, expr[1])
+        return '-%s' % subexpr_to_xpath('unary')
     else:
         op = {
             'add': '+',
