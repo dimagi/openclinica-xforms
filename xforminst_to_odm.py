@@ -8,10 +8,10 @@ def parse_metadata(root):
     m = re.match(r'\{.+/(?P<study>[^/]+)/(?P<mdv>[^/]+)/(?P<studyevent>[^/]+)/?\}(?P<form>.+)', root.tag)
     return [m.group(k) for k in ['study', 'mdv', 'studyevent', 'form']]
 
-def build_submission(root):
+def build_submission(root, ref_instance):
     metadata = parse_metadata(root)
 
-    # need to reconcile instance
+    root = reconcile_instance(root, ref_instance)
 
     #debug
     subject = ('SS_TESTSUBJ', 'test subject')
@@ -31,6 +31,19 @@ def build_submission(root):
     convert_instance(root, seevtdata, True)
 
     return odm
+
+def reconcile_instance(inst_node, ref_node):
+    """xforms hides non-relevant nodes, but ODM expects them with empty
+    values. take the 'gold-standard' instance from the original form and
+    populate it with the submitted data"""
+    if inst_node is None:
+        pass
+    elif list(ref_node):
+        for ref_child in ref_node:
+            reconcile_instance(inst_node.find(ref_child.tag), ref_child)
+    else:
+        ref_node.text = inst_node.text
+    return ref_node
 
 def convert_instance(in_node, out_node, root=False):
     name = in_node.tag.split('}')[-1]
@@ -53,11 +66,8 @@ def convert_instance(in_node, out_node, root=False):
         q.attrib['Value'] = (in_node.text or '')
 
 def convert_odm(f, source):
-    print source.tag
-
-
     doc = et.parse(f)
-    return build_submission(doc.getroot())
+    return build_submission(doc.getroot(), list(source.find('.//%s' % _('instance', 'xf')))[0])
 
 if __name__ == "__main__":
     
