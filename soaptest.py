@@ -4,8 +4,8 @@ import hashlib
 import urlparse
 
 SOAP_URL = 'https://64.119.157.114:8070/OpenClinica-ws/'
-SE_WSDL = 'ws/studySubject/v1/studySubjectWsdl.wsdl'
-
+SUBJ_WSDL = 'ws/studySubject/v1/studySubjectWsdl.wsdl'
+SE_WSDL = 'ws/event/v1/eventWsdl.wsdl'
 USER = 'droos'
 PASS = 'password'
 
@@ -47,10 +47,33 @@ def create_subject(conn, subj_id, enrolled_on, gender, study_id):
     if resp.result.lower() != 'success':
         raise Exception([str(e) for e in resp.error])
 
+def sched(conn, subj_id, event_type_oid, location, start, end, study_id):
+    evt = conn.factory.create('ns0:eventType')
+
+    evt.studySubjectRef = conn.factory.create('ns0:studySubjectRefType')
+    evt.studySubjectRef.label = subj_id
+    evt.studyRef = conn.factory.create('ns0:studyRefType')
+    evt.studyRef.identifier = study_id
+    evt.eventDefinitionOID = event_type_oid
+    evt.startDate = start.strftime('%Y-%m-%d')
+    evt.startTime = start.strftime('%H:%M')
+    evt.endDate = end.strftime('%Y-%m-%d')
+    evt.endTime = end.strftime('%H:%M')
+    evt.location = location
+
+    print evt
+
+    resp = conn.service.schedule([evt])
+    print resp
+
 if __name__ == "__main__":
 
-    from datetime import date
+    from datetime import datetime, date, timedelta
+
+    SUBJ = 'WSSUBJ57'
+
+#    conn = connect(SOAP_URL, SUBJ_WSDL, USER, PASS)
+#    create_subject(conn, SUBJ, date.today(), 'f', 'CPCS')
 
     conn = connect(SOAP_URL, SE_WSDL, USER, PASS)
-
-    create_subject(conn, 'WSSUBJ57', date.today(), 'f', 'CPCS')
+    sched(conn, SUBJ, 'SE_CPCS', 'burgdorf', datetime.now() - timedelta(minutes=5), datetime.now(), 'CPCS')
