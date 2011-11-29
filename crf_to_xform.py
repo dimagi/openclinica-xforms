@@ -37,6 +37,7 @@ class Question(object):
                 return {
                     'integer': 'int',
                     'float': 'float',
+                    'barcode': 'barcode',
                 }[self.datatype]
             except KeyError:
                 return 'str'
@@ -60,7 +61,7 @@ class Question(object):
         if self.type() in ('str', 'select1', 'selectmulti'):
             return None
         else:
-            return {'int': 'int', 'float': 'decimal'}[self.type()]
+            return {'int': 'int', 'float': 'decimal', 'barcode': 'barcode'}[self.type()]
 
     def xpathname(self):
         return self.id
@@ -193,9 +194,17 @@ def parse_study(docroot):
     groups = parse_groups(node, questions)
     forms = parse_forms(node, groups)
 
+    inject_patient_reg(forms[0])
+
     rules = parse_rules(node.find(_('Rules', 'ocr')))
 
     return (study_id, mdv), forms, rules
+
+def inject_patient_reg(form):
+    pat_id = Question('pat_id', 'PATIENT_ID', 'barcode', 'Patient ID', None)
+    pat_id.required = True
+    reg_group = QuestionGroup('_subject', 'Patient Info', [pat_id])
+    form.items.insert(0, reg_group)
 
 def parse_rules(node):
     ruledefs = parse_ruledefs(node)
