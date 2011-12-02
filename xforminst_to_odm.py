@@ -10,11 +10,8 @@ def parse_metadata(root):
 
 def build_submission(root, ref_instance):
     metadata = parse_metadata(root)
-
     root = reconcile_instance(root, ref_instance)
-
-    #debug
-    subject = ('SS_TESTSUBJ', 'test subject')
+    subject = extract_subject(root)
 
     odm = et.Element(_('ODM'))
     clindata = et.SubElement(odm, _('ClinicalData'))
@@ -22,8 +19,8 @@ def build_submission(root, ref_instance):
     clindata.attrib['MetaDataVersionOID'] = metadata[1]
 
     subjdata = et.SubElement(clindata, _('SubjectData'))
-    subjdata.attrib['SubjectKey'] = subject[0]
-    subjdata.attrib[_('StudySubjectID', 'oc')] = subject[1]
+    subjdata.attrib['SubjectKey'] = subject
+#    subjdata.attrib[_('StudySubjectID', 'oc')] = subject[1]
 
     seevtdata = et.SubElement(subjdata, _('StudyEventData'))
     seevtdata.attrib['StudyEventOID'] = metadata[2]
@@ -31,6 +28,19 @@ def build_submission(root, ref_instance):
     convert_instance(root, seevtdata, True)
 
     return odm
+
+def extract_subject(root):
+    m = re.match(r'\{(?P<xmlns>.+)\}.+', root.tag)
+    xmlns = m.group('xmlns')
+
+    def _(tag):
+        return '{%s}%s' % (xmlns, tag)
+
+    patient_info = root.find(_('_subject'))
+    pat_id = patient_info.find(_('pat_id')).text
+    root.remove(patient_info)
+
+    return 'SS_%s' % pat_id # is this reliable?
 
 def reconcile_instance(inst_node, ref_node):
     """xforms hides non-relevant nodes, but ODM expects them with empty
