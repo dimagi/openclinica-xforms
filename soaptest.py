@@ -1,8 +1,11 @@
 from suds.client import Client
 from suds.wsse import Security, UsernameToken
 from suds.sax.text import Raw
+from xml.etree import ElementTree as et
 import hashlib
 import urlparse
+import re
+from crf_to_xform import dump_xml
 
 SOAP_URL = 'https://64.119.157.114:8070/OpenClinica-ws/'
 SUBJ_WSDL = 'ws/studySubject/v1/studySubjectWsdl.wsdl'
@@ -68,56 +71,42 @@ def sched(conn, subj_id, event_type_oid, location, start, end, study_id):
         raise Exception([str(e) for e in resp.error])
     return int(resp.studyEventOrdinal)
 
-def submit(conn, odmraw):
-    print odmraw
-    resp = getattr(conn.service, 'import')(Raw(odmraw))
-#    resp = getattr(conn.service, 'import')(odmraw)
-    print resp
+def submit(conn, f_inst):
+    odm_raw = dump_xml(strip_namespaces(f_inst))
+
+    resp = getattr(conn.service, 'import')(Raw(odm_raw))
+    if resp.result.lower() != 'success':
+        raise Exception([str(e) for e in resp.error])
+
+def strip_namespaces(f_inst):
+    def tag(qname):
+        m = re.match(r'\{.+\}(?P<tag>.+)', qname)
+        return m.group('tag')
+
+    def strip_ns(node):
+        node.tag = tag(node.tag)
+        for child in node:
+            strip_ns(child)
+
+    root = et.parse(f_inst).getroot()
+    strip_ns(root)
+    return root
 
 if __name__ == "__main__":
-
-    from datetime import datetime, date, timedelta
 
     import random
     SUBJ = 'K%06d' % random.randint(0, 999999)
 #    SUBJ = 'K464347'
 
-    conn = connect(SOAP_URL, SUBJ_WSDL, USER, PASS)
-    create_subject(conn, SUBJ, date.today(), 'f', 'CPCS')
+#    conn = connect(SOAP_URL, SUBJ_WSDL, USER, PASS)
+#    create_subject(conn, SUBJ, date.today(), 'f', 'CPCS')
 
-    conn = connect(SOAP_URL, SE_WSDL, USER, PASS)
-    offset = timedelta(hours=1)
-    event_num = sched(conn, SUBJ, 'SE_CPCS', 'burgdorf', datetime.now() - timedelta(minutes=5) + offset, datetime.now() + offset, 'CPCS')
+#    conn = connect(SOAP_URL, SE_WSDL, USER, PASS)
+#    from datetime import datetime, date, timedelta
+#    offset = timedelta(hours=1)
+#    event_num = sched(conn, SUBJ, 'SE_CPCS', 'burgdorf', datetime.now() - timedelta(minutes=5) + offset, datetime.now() + offset, 'CPCS')
 
     conn = connect(SOAP_URL, DATA_WSDL, USER, PASS)
     with open('/home/drew/tmp/crfinst.xml') as f:
-        from suds.sax.parser import Parser
-#        submit(conn, Parser().parse(f).root())
-        submit(conn, f.read())
+        submit(conn, f)
 
-
-
-"""
-<v1:importRequest>
-<ODM>
-<ClinicalData StudyOID="S_CRF_A" MetaDataVersionOID="v1.0.0">
- 
-<SubjectData SubjectKey="SS_0009TEST">
- 
-<StudyEventData StudyEventOID="SE_TESTSTUDYEVENT1" StudyEventRepeatKey="1">
-<FormData FormOID="F_NONCASCADE_C_NONCASCADE">
- <ItemGroupDef OID="IG_NONCA_UNGROUPED"   ItemGroupRepeatKey="1" TransactionType="Insert">
-                  <ItemData ItemOID="I_NONCA_CAN_PHY1" Value="1" />
-                <ItemData ItemOID="I_NONCA_CAN_PHY2" Value="2" />
-                <ItemData ItemOID="I_NONCA_CAN_PHY3" Value="aaa3" />
-                <ItemData ItemOID="I_NONCA_CAN_PHY4" Value="4" />
-                <ItemData ItemOID="I_NONCA_CAN_PHY5" Value="5" />
-      
- </ItemGroupDef>
-</FormData>
-</StudyEventData>
-</SubjectData>
-</ClinicalData>
-</ODM>
-</v1:importRequest>
-"""
