@@ -36,6 +36,26 @@ def connect(base_url, wsdl, user, passwd):
 
     return client
 
+def lookup_subject(conn, subj_id, study_id):
+    subj = conn.factory.create('ns0:studySubjectType')
+
+    subj.label = subj_id
+    subj.studyRef = conn.factory.create('ns0:studyRefType')
+    subj.studyRef.identifier = study_id
+
+    # suds chokes on the valid response for this service, so dig into the
+    # raw xml response instead
+    conn.set_options(retxml=True)
+    resp = conn.service.isStudySubject(subj)
+    root = et.fromstring(resp)
+    xmlns = urlparse.urljoin('http://openclinica.org/', conn.wsdl.services[0].ports[0].location[1:])
+    result = root.findall('.//{%s}result' % xmlns)[0].text
+
+    if result.lower() == 'success':
+        return {'x': 'x'}
+    else:
+        return None
+
 def create_subject(conn, subj_id, enrolled_on, gender, study_id):
     subj = conn.factory.create('ns0:studySubjectType')
 
@@ -95,18 +115,20 @@ def strip_namespaces(f_inst):
 if __name__ == "__main__":
 
     import random
+    from datetime import datetime, date, timedelta
+
     SUBJ = 'K%06d' % random.randint(0, 999999)
 #    SUBJ = 'K464347'
 
-#    conn = connect(SOAP_URL, SUBJ_WSDL, USER, PASS)
+    conn = connect(SOAP_URL, SUBJ_WSDL, USER, PASS)
+    print lookup_subject(conn, SUBJ, 'CPCS')
 #    create_subject(conn, SUBJ, date.today(), 'f', 'CPCS')
 
 #    conn = connect(SOAP_URL, SE_WSDL, USER, PASS)
-#    from datetime import datetime, date, timedelta
 #    offset = timedelta(hours=1)
 #    event_num = sched(conn, SUBJ, 'SE_CPCS', 'burgdorf', datetime.now() - timedelta(minutes=5) + offset, datetime.now() + offset, 'CPCS')
 
-    conn = connect(SOAP_URL, DATA_WSDL, USER, PASS)
-    with open('/home/drew/tmp/crfinst.xml') as f:
-        submit(conn, f)
+#    conn = connect(SOAP_URL, DATA_WSDL, USER, PASS)
+#    with open('/home/drew/tmp/crfinst.xml') as f:
+#        submit(conn, f)
 
