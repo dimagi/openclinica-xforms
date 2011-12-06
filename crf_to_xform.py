@@ -12,7 +12,33 @@ from optparse import OptionParser
 
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
-Rule = collections.namedtuple('Rule', ['expr', 'action', 'target', 'set_val', 'trigger'])
+
+class Rule(object):
+    def __init__(self, expr, action, target, set_val, trigger):
+        self.expr = expr
+        self.action = action
+        self.target = target
+        self.set_val = set_val
+        self.trigger = trigger
+
+    def xpath(self, oid_to_ref):
+        return expr_to_xpath(self.expr, oid_to_ref)
+
+class XRule(object):
+    def __init__(self, action, _target, expr, *_refs):
+        self.action = action
+        self.target = self.oid_or_obj(_target)
+        self.expr = expr
+        self._refs = _refs
+
+    def oid_or_obj(self, o):
+        try:
+            return o.id
+        except AttributeError:
+            return o
+
+    def xpath(self, oid_to_ref):
+        return self.expr % tuple(oid_to_ref(self.oid_or_obj(_r)) for _r in self._refs)
 
 class Choice(object):
     def __init__(self, label, value):
@@ -49,6 +75,9 @@ class Question(object):
                 yield ch
 
     def xf_control_type(self):
+        if self.datatype == 'info':
+            return 'trigger'
+
         try:
             return {
                 'select1': 'select1',
@@ -193,18 +222,29 @@ def parse_study(docroot):
     questions = parse_items(node, codelists)
     groups = parse_groups(node, questions)
     forms = parse_forms(node, groups)
-
-    inject_patient_reg(forms[0])
-
     rules = parse_rules(node.find(_('Rules', 'ocr')))
 
+    inject_structure(forms[0], rules)
     return (study_id, mdv), forms, rules
 
-def inject_patient_reg(form):
+def inject_structure(form, rules):
+    crf_group = QuestionGroup('crf', None, form.items)
+
     pat_id = Question('pat_id', 'PATIENT_ID', 'barcode', 'Patient ID', None)
     pat_id.required = True
-    reg_group = QuestionGroup('_subject', 'Patient Info', [pat_id])
-    form.items.insert(0, reg_group)
+    reg_group = QuestionGroup('subject', 'Patient Info', [pat_id])
+
+    screening_complete = Question('screening_complete', None, None, None, None)
+    info_complete = Question('info_screen_complete', None, 'info', 'A completed screening form is already on file for this patient.', None)
+    tmp_group = QuestionGroup('tmp', None, [screening_complete, info_complete])
+
+    rules.extend([
+        XRule('calculated', screening_complete, 'needs-screening(%s)', pat_id),
+        XRule('relevancy', crf_group, '%s', screening_complete),
+        XRule('relevancy', info_complete, 'not(%s)', screening_complete),
+    ])
+
+    form.items = [reg_group, crf_group, tmp_group]
 
 def parse_rules(node):
     ruledefs = parse_ruledefs(node)
@@ -231,7 +271,7 @@ def parse_ruleassn(node, ruledefs):
     for rr in node.findall(_('RuleRef', 'ocr')):
         expr = ruledefs[rr.attrib['OID']].expr
         for n_act in actions(rr):
-            action_type = 'relevancy' if not is_action(n_act, 'InsertAction') else 'calculate'
+            action_type = 'relevancy' if not is_action(n_act, 'InsertAction') else 'calculated'
             if_true = {'true': True, 'false': False}[n_act.attrib['IfExpressionEvaluates']]
             if is_action(n_act, 'HideAction'):
                 if_true = not if_true
@@ -358,13 +398,13 @@ def build_bind_rules(bind, o, rules, form):
     if not rule:
         return False
 
-    if rule.action == 'calculate':
-        sys.stderr.write('calculate rules not supported yet\n')
-        return False
-
     #todo: warning if 'trigger' does not appear in expr
 
-    bind.attrib['relevant'] = expr_to_xpath(rule.expr, oid_to_ref)
+    attr = {
+        'relevancy': 'relevant',
+        'calculated': 'calculate',
+    }[rule.action]
+    bind.attrib[attr] = rule.xpath(oid_to_ref)
     return True
 
 noderefs = {}
@@ -407,11 +447,13 @@ def build_itext(parent_node, form, options):
     def gen_idict():
         for o in _all_instance_nodes(form):
             if isinstance(o, Question):
-                yield (o.id, o.label)
-                for ch in o.choices():
-                    yield (ch.ref_id, ch.label)
+                if o.label:
+                    yield (o.id, o.label)
+                    for ch in o.choices():
+                        yield (ch.ref_id, ch.label)
             else:
-                yield (o.id, o.name)
+                if o.name:
+                    yield (o.id, o.name)
     ref_idict = dict(gen_idict())
     build_itext_lang(itext, DEFAULT_LANG, ref_idict)
 
@@ -476,14 +518,20 @@ def build_body_item(item):
         #group
         node = et.Element(_('group', 'xf'))
         node.attrib['ref'] = item.xpathname()
-        make_label(node, item.id)
+        if item.name:
+            make_label(node, item.id)
         for child in item.items:
-            node.append(build_body_item(child))
+            childnode = build_body_item(child)
+            if childnode:
+                node.append(childnode)
     else:
         node = build_question(item)
     return node
 
 def build_question(item):
+    if not item.label:
+        return None
+
     q = et.Element(_(item.xf_control_type(), 'xf'))
     q.attrib['ref'] = item.xpathname()
     make_label(q, item.id)
