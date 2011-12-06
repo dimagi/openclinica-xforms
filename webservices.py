@@ -6,20 +6,11 @@ import hashlib
 import urlparse
 import re
 from crf_to_xform import dump_xml
+import logging
 
-SOAP_URL = 'https://64.119.157.114:8070/OpenClinica-ws/'
 SUBJ_WSDL = 'ws/studySubject/v1/studySubjectWsdl.wsdl'
 SE_WSDL = 'ws/event/v1/eventWsdl.wsdl'
 DATA_WSDL = 'ws/data/v1/dataWsdl.wsdl'
-USER = 'droos'
-PASS = 'password'
-
-import logging
-logging.basicConfig(level=logging.INFO)
-logging.getLogger('suds.client').setLevel(logging.DEBUG)
-logging.getLogger('suds.transport').setLevel(logging.DEBUG)
-logging.getLogger('suds.xsd.schema').setLevel(logging.DEBUG)
-logging.getLogger('suds.wsdl').setLevel(logging.DEBUG)
 
 def connect(base_url, wsdl, user, passwd):
     client = Client(urlparse.urljoin(base_url, wsdl))
@@ -98,6 +89,8 @@ def submit(conn, f_inst):
     if resp.result.lower() != 'success':
         raise Exception([str(e) for e in resp.error])
 
+
+
 def strip_namespaces(f_inst):
     def tag(qname):
         m = re.match(r'\{.+\}(?P<tag>.+)', qname)
@@ -112,7 +105,22 @@ def strip_namespaces(f_inst):
     strip_ns(root)
     return root
 
+
+
+def init_logging():
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger('suds.client').setLevel(logging.DEBUG)
+    logging.getLogger('suds.transport').setLevel(logging.DEBUG)
+    logging.getLogger('suds.xsd.schema').setLevel(logging.DEBUG)
+    logging.getLogger('suds.wsdl').setLevel(logging.DEBUG)
+
 if __name__ == "__main__":
+    
+    SOAP_URL = 'https://64.119.157.114:8070/OpenClinica-ws/'
+    USER = 'droos'
+    PASS = 'password'
+
+    init_logging()
 
     import random
     from datetime import datetime, date, timedelta
