@@ -239,9 +239,9 @@ def inject_structure(form, rules):
     tmp_group = QuestionGroup('tmp', None, [screening_complete, info_complete])
 
     rules.extend([
-        XRule('calculated', screening_complete, 'needs-screening(%s)', pat_id),
-        XRule('relevancy', crf_group, '%s', screening_complete),
-        XRule('relevancy', info_complete, 'not(%s)', screening_complete),
+        XRule('calculated', screening_complete, 'not(needs-screening(%s))', pat_id),
+        XRule('relevancy', crf_group, 'not(%s)', screening_complete),
+        XRule('relevancy', info_complete, '%s', screening_complete),
     ])
 
     form.items = [reg_group, crf_group, tmp_group]

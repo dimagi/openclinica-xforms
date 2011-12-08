@@ -10,16 +10,22 @@ import json
 import webservices as ws
 from optparse import OptionParser
 from urlparse import urlparse, parse_qs
+import email
+from xforminst_to_odm import process_instance
+import util
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
 DEFAULT_PORT = 8053
+ODK_SUBMIT_PATH = 'submission'
+XFORM_PATH = '/home/drew/tmp/chintest.xml'
 
 def _async(callback, func):
     try:
         result = func()
         success = True
     except Exception, e:
+        logging.exception('exception in handler thread')
         result = '%s %s' % (type(e), str(e))
         success = False
 
@@ -28,13 +34,17 @@ def _async(callback, func):
 def async(request, func):
     threading.Thread(target=_async, args=[request._respond, func]).start()
 
-class SimpleSOAPHandler(web.RequestHandler):
+class BaseHandler(web.RequestHandler):
     def initialize(self, conn):
         self.conn = conn
 
     @web.asynchronous
     def get(self):
-        async(self, self.handle())
+        async(self, lambda: self.handle())
+
+    @web.asynchronous
+    def post(self):
+        async(self, lambda: self.handle())
 
     def _respond(self, success, result):
         if success:
@@ -45,12 +55,46 @@ class SimpleSOAPHandler(web.RequestHandler):
             # this doesn't seem to work
             raise HTTPError(500, result)
 
-class LookupSubjectHandler(SimpleSOAPHandler):
+class NeedsScreeningHandler(BaseHandler):
     def handle(self):
         subj_id = self.get_argument('subject_id')
         study_id = self.get_argument('study_id')
-        return lambda: self.conn.lookup_subject(subj_id, study_id)
 
+        # right now, if patient exists, assume screening form filled out
+
+        # in future, we'd also have to check if the form is complete and on file
+        # within a certain historial time window
+
+        # also TODO: cache patient demographic info in memcached
+
+        result = self.conn.lookup_subject(subj_id, study_id)
+        return (result is None)
+
+class SubmitHandler(BaseHandler):
+    def head(self):
+        scheme = self.request.protocol #'http' # will need to support https eventually?
+        host = self.request.host
+
+        self.set_status(204)
+        self.set_header('Location', '%s://%s/%s' % (scheme, host, ODK_SUBMIT_PATH))
+        self.finish()        
+
+    def handle(self):
+        content_type = self.request.headers.get('Content-Type')
+        payload = self.request.body
+
+        if not content_type.startswith('multipart/form-data'):
+            raise HTTPError(500, 'don\'t understand submission content type')
+
+        m = email.message_from_string('Content-Type: %s\n\n%s' % (content_type, payload))
+        form_part = [part for part in m.get_payload() if part.get('Content-Disposition').startswith('form-data')][0]
+        xfinst = form_part.get_payload()
+        logging.debug('received xform submission:\n%s' % xfinst)
+
+        resp = process_instance(xfinst, XFORM_PATH)
+        if resp['screening']:
+            # submit to OC
+            pass
 
 class WSDL(object):
     def __init__(self, url, user, password):
@@ -90,15 +134,27 @@ if __name__ == "__main__":
     conn = WSDL(url, options.user, options.password)
 
     application = web.Application([
-        (r'/lookup', LookupSubjectHandler, {'conn': conn}),
+        (r'/needs-screening', NeedsScreeningHandler, {'conn': conn}),
+        (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn}),
     ])
     application.listen(options.port)
     IOLoop.instance().start()
 
 """
+needs-screening:
+
+patient-info
+
+submit
+
 #needs screening:
 
 given: patid
+
+patient exists, needs screen
+patient exists, no screen
+patient exists
+
 
 return whether pat e
 """

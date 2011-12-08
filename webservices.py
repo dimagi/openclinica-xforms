@@ -5,8 +5,8 @@ from xml.etree import ElementTree as et
 import hashlib
 import urlparse
 import re
-from crf_to_xform import dump_xml
 import logging
+import util
 
 SUBJ_WSDL = 'ws/studySubject/v1/studySubjectWsdl.wsdl'
 SE_WSDL = 'ws/event/v1/eventWsdl.wsdl'
@@ -83,27 +83,11 @@ def sched(conn, subj_id, event_type_oid, location, start, end, study_id):
     return int(resp.studyEventOrdinal)
 
 def submit(conn, f_inst):
-    odm_raw = dump_xml(strip_namespaces(f_inst))
+    odm_raw = util.dump_xml(util.strip_namespaces(f_inst))
 
     resp = getattr(conn.service, 'import')(Raw(odm_raw))
     if resp.result.lower() != 'success':
         raise Exception([str(e) for e in resp.error])
-
-
-
-def strip_namespaces(f_inst):
-    def tag(qname):
-        m = re.match(r'\{.+\}(?P<tag>.+)', qname)
-        return m.group('tag')
-
-    def strip_ns(node):
-        node.tag = tag(node.tag)
-        for child in node:
-            strip_ns(child)
-
-    root = et.parse(f_inst).getroot()
-    strip_ns(root)
-    return root
 
 
 
