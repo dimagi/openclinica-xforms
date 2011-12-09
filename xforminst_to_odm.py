@@ -1,4 +1,4 @@
-from crf_to_xform import _, pprintxml, convert_xform
+from crf_to_xform import _, convert_xform
 from xml.etree import ElementTree as et
 import sys
 import re
@@ -121,5 +121,5 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
    
     inst = (sys.stdin if args[0] == '-' else open(args[0]))
-    pprintxml(util.dump_xml(convert_odm(inst, load_source(options.xform, options.crf))))
+    print util.dump_xml(convert_odm(inst, load_source(options.xform, options.crf)), pretty=True)
 

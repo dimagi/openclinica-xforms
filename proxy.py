@@ -46,10 +46,13 @@ class BaseHandler(web.RequestHandler):
     def post(self):
         async(self, lambda: self.handle())
 
+    def _success(self, result):
+        self.set_header('Content-Type', 'text/json')
+        self.write(json.dumps(result))
+
     def _respond(self, success, result):
         if success:
-            self.set_header('Content-Type', 'text/json')
-            self.write(json.dumps(result))
+            self._success(result)
             self.finish()
         else:
             # this doesn't seem to work
@@ -89,12 +92,22 @@ class SubmitHandler(BaseHandler):
         m = email.message_from_string('Content-Type: %s\n\n%s' % (content_type, payload))
         form_part = [part for part in m.get_payload() if part.get('Content-Disposition').startswith('form-data')][0]
         xfinst = form_part.get_payload()
-        logging.debug('received xform submission:\n%s' % xfinst)
+        logging.debug('received xform submission:\n%s' % util.dump_xml(xfinst, pretty=True))
 
         resp = process_instance(xfinst, XFORM_PATH)
         if resp['screening']:
+            logging.debug('converted to odm:\n%s' % util.dump_xml(resp['screening'], pretty=True))
+
             # submit to OC
             pass
+        
+        return 'processed successfully'
+
+    def _success(self, result):
+        self.set_status(202)
+        self.set_header('Content-Type', 'text/plain')
+        self.write(result)
+        
 
 class WSDL(object):
     def __init__(self, url, user, password):

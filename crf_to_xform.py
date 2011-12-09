@@ -9,6 +9,7 @@ import os.path
 from subprocess import Popen, PIPE
 import csv
 from optparse import OptionParser
+import util
 
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
@@ -552,28 +553,6 @@ def make_label(parent, key=None, inline=None):
 def itext(key):
     return 'jr:itext(\'%s\')' % key
 
-def pprint(o):
-    def convert(o):
-        if hasattr(o, '__iter__'):
-            if hasattr(o, '_asdict'):
-                return convert(o._asdict())
-            elif hasattr(o, 'iteritems'):
-                return dict((k, convert(v)) for k, v in o.iteritems())
-            else:
-                return [convert(e) for e in o]
-        elif hasattr(o, '__dict__'):
-            return convert(o.__dict__)
-        else:
-            return o
-
-    import pprint
-    pp = pprint.PrettyPrinter(indent=2)
-    pp.pprint(convert(o))
-    
-def pprintxml(xmlstr):
-    from lxml import etree as lx
-    print lx.tostring(lx.fromstring(xmlstr), pretty_print=True)
-
 
 
 
@@ -595,17 +574,12 @@ def convert_xform(f, options={'dumptx': False, 'translations': None}):
     doc = et.parse(f)
     study_id, forms, rules = parse_study(doc.getroot())
 
-#    pprint(forms)
-#    pprint(rules)
+#    util.pprint(forms)
+#    util.pprint(rules)
 
     return build_xform(study_id, forms[0], rules, options)
 
-def dump_xml(root):
-    tree = et.ElementTree(root)
-    out = StringIO()
-    tree.write(out, encoding='utf-8')
-    return out.getvalue()
-    
+
 
     
 if __name__ == "__main__":
@@ -619,7 +593,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     crf = (sys.stdin if args[0] == '-' else open(args[0]))
-    pprintxml(dump_xml(convert_xform(crf, options.__dict__)))
+    print util.dump_xml(convert_xform(crf, options.__dict__), pretty=True)
 
 
 
