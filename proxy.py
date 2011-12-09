@@ -14,7 +14,9 @@ import email
 from xforminst_to_odm import process_instance
 import util
 
-logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+logger = logging.getLogger('proxy')
+logger.setLevel(logging.DEBUG)
 
 DEFAULT_PORT = 8053
 ODK_SUBMIT_PATH = 'submission'
@@ -25,7 +27,7 @@ def _async(callback, func):
         result = func()
         success = True
     except Exception, e:
-        logging.exception('exception in handler thread')
+        logger.exception('exception in handler thread')
         result = '%s %s' % (type(e), str(e))
         success = False
 
@@ -92,19 +94,22 @@ class SubmitHandler(BaseHandler):
         m = email.message_from_string('Content-Type: %s\n\n%s' % (content_type, payload))
         form_part = [part for part in m.get_payload() if part.get('Content-Disposition').startswith('form-data')][0]
         xfinst = form_part.get_payload()
-        logging.debug('received xform submission:\n%s' % util.dump_xml(xfinst, pretty=True))
+        logger.debug('received xform submission:\n%s' % util.dump_xml(xfinst, pretty=True))
 
         resp = process_instance(xfinst, XFORM_PATH)
-        if resp['screening']:
-            logging.debug('converted to odm:\n%s' % util.dump_xml(resp['screening'], pretty=True))
+        if resp['odm']:
+            logger.debug('converted to odm:\n%s' % util.dump_xml(resp['odm'], pretty=True))
 
-            # submit to OC
-            pass
+            # for now, assume that patient must be created
+            self.conn.create_subject(resp['subject_id'], resp['birthdate'], resp['gender'], resp['study_id'])
+            event_ix = self.conn.sched_event(resp['subject_id'], resp['studyevent_id'],
+                                            resp['location'], resp['start'], resp['end'], resp['study_id'])
+            self.conn.submit(resp['odm'])
         
         return 'processed successfully'
 
     def _success(self, result):
-        self.set_status(202)
+#        self.set_status(202)
         self.set_header('Content-Type', 'text/plain')
         self.write(result)
         

@@ -5,6 +5,7 @@ import re
 from optparse import OptionParser
 from StringIO import StringIO
 import util
+from datetime import date, datetime, timedelta
 
 def parse_metadata(root):
     xmlns, tag = util.split_tag(root.tag)
@@ -24,8 +25,10 @@ def build_submission(root, ref_instance):
         return '{%s}%s' % (metadata['xmlns'], tag)
 
     subject = extract_subject(root, _i)
-    crf_root = root.find(_i('crf'))
-    crf_root = reconcile_instance(crf_root, ref_instance)
+
+    def real_inst(root):
+        return root.find(_i('crf'))
+    crf_root = reconcile_instance(real_inst(root), real_inst(ref_instance))
 
     odm = et.Element(_('ODM'))
     clindata = et.SubElement(odm, _('ClinicalData'))
@@ -40,13 +43,24 @@ def build_submission(root, ref_instance):
 
     convert_instance(crf_root, seevtdata, metadata['form'])
 
-    return odm
+    return {
+        'odm': odm,
+        'study_id': util.strip_oid(metadata['study'], 'study'),
+        'studyevent_id': metadata['studyevent'],
+        'subject_id': util.strip_oid(subject, 'subj'),
+
+        'location': 'BURGDORF', #config var?
+        'start': datetime.now(), #TODO link to TimeStart
+        'end': datetime.now(), #TODO link to TimeEnd
+        'birthdate': date(1983, 10, 6), #TODO link to xf question
+        'gender': 'f', #TODO link to xf question
+    }
 
 def extract_subject(root, _):
     patient_info = root.find(_('subject'))
     pat_id = patient_info.find(_('pat_id')).text
 
-    return 'SS_%s' % pat_id # is this reliable?
+    return util.make_oid(pat_id, 'subj')
 
 def reconcile_instance(inst_node, ref_node):
     """xforms hides non-relevant nodes, but ODM expects them with empty
@@ -88,18 +102,14 @@ def convert_odm(f, source):
 def process_instance(xfinst, xform_path):
     resp = {}
 
-    f_inst = StringIO()
-    f_inst.write(xfinst)
-
-    f_inst.seek(0)
-    inst = util.strip_namespaces(f_inst)
+    inst = util.strip_namespaces(et.fromstring(xfinst))
     contains_screening = not(int(inst.find('.//tmp/screening_complete').text))
 
     if contains_screening:
-        f_inst.seek(0)
-        resp['screening'] = convert_odm(f_inst, load_source(xform_path=xform_path))
+        resp.update(convert_odm(util.xmlfile(xfinst), load_source(xform_path=xform_path)))
     else:
-        resp['screening'] = None
+        resp['subject_id'] = util.make_oid(inst.find('.//subject/pat_id').text, 'subj')
+        resp['odm'] = None
 
     return resp
 
@@ -121,5 +131,8 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
    
     inst = (sys.stdin if args[0] == '-' else open(args[0]))
-    print util.dump_xml(convert_odm(inst, load_source(options.xform, options.crf)), pretty=True)
+    submission = convert_odm(inst, load_source(options.xform, options.crf))
+    print util.dump_xml(submission['odm'], pretty=True)
+    del submission['odm']
+    util.pprint(submission)
 

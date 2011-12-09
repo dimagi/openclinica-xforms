@@ -2,15 +2,11 @@ import re
 from xml.etree import ElementTree as et
 from StringIO import StringIO
 
-def strip_namespaces(f_inst):
-    def strip_ns(node):
-        node.tag = split_tag(node.tag)[1]
-        for child in node:
-            strip_ns(child)
-
-    root = et.parse(f_inst).getroot()
-    strip_ns(root)
-    return root
+def strip_namespaces(node):
+    node.tag = split_tag(node.tag)[1]
+    for child in node:
+        strip_namespaces(child)
+    return node
 
 def dump_xml(xml, pretty=False):
     datatype = 'str' if isinstance(xml, type('')) else 'dom'
@@ -52,3 +48,23 @@ def pprint(o):
     pp = pprint.PrettyPrinter(indent=2)
     pp.pprint(convert(o))
 
+def xmlfile(xmlstr):
+    f = StringIO()
+    f.write(xmlstr)
+    f.seek(0)
+    return f
+
+def oid_prefix(type):
+    return {
+        'study': 'S',
+        'studyevent': 'SE',
+        'subj': 'SS',
+    }[type]
+
+def make_oid(id, type):
+    return '%s_%s' % (oid_prefix(type), id)
+
+def strip_oid(id, type):
+    prefix = '%s_' % oid_prefix(type)
+    assert id.startswith(prefix)
+    return id[len(prefix):]

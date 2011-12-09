@@ -82,8 +82,8 @@ def sched(conn, subj_id, event_type_oid, location, start, end, study_id):
         raise Exception([str(e) for e in resp.error])
     return int(resp.studyEventOrdinal)
 
-def submit(conn, f_inst):
-    odm_raw = util.dump_xml(util.strip_namespaces(f_inst))
+def submit(conn, instnode):
+    odm_raw = util.dump_xml(util.strip_namespaces(instnode))
 
     resp = getattr(conn.service, 'import')(Raw(odm_raw))
     if resp.result.lower() != 'success':
