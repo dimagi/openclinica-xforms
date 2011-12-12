@@ -58,7 +58,11 @@ class BaseHandler(web.RequestHandler):
             self.finish()
         else:
             # this doesn't seem to work
-            raise HTTPError(500, result)
+            # raise HTTPError(500, result)
+
+            self.set_status(500)
+            self.write(result)
+            self.finish()
 
 class NeedsScreeningHandler(BaseHandler):
     def handle(self):
@@ -109,7 +113,7 @@ class SubmitHandler(BaseHandler):
         return 'processed successfully'
 
     def _success(self, result):
-#        self.set_status(202)
+        self.set_status(202)
         self.set_header('Content-Type', 'text/plain')
         self.write(result)
         
