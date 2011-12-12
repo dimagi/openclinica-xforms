@@ -18,7 +18,7 @@ def parse_metadata(root):
     meta.update((k, m.group(k)) for k in ['study', 'mdv', 'studyevent'])
     return meta
 
-def build_submission(root, ref_instance):
+def build_submission(root, ref_instance, reconcile=False):
     metadata = parse_metadata(root)
 
     def _i(tag):
@@ -28,7 +28,9 @@ def build_submission(root, ref_instance):
 
     def real_inst(root):
         return root.find(_i('crf'))
-    crf_root = reconcile_instance(real_inst(root), real_inst(ref_instance))
+    crf_root = real_inst(root)
+    if reconcile:
+        crf_root = reconcile_instance(crf_root, real_inst(ref_instance))
 
     odm = et.Element(_('ODM'))
     clindata = et.SubElement(odm, _('ClinicalData'))
