@@ -147,15 +147,18 @@ def parse_code_list_item(cli_node, datatype):
 
     return Choice(label, value)
 
-def parse_items(root, code_lists):
-    questions = filter(lambda e: e, (parse_item(item_node, code_lists) for item_node in root.findall(_('ItemDef'))))
+def parse_items(root, code_lists, units):
+    questions = filter(lambda e: e, (parse_item(item_node, code_lists, units) for item_node in root.findall(_('ItemDef'))))
     return dict((q.id, q) for q in questions)
 
-def parse_item(item_node, code_lists):
+def parse_item(item_node, code_lists, units={}):
     id = item_node.attrib['OID']
     name = item_node.attrib['Name']
     datatype = item_node.attrib['DataType']
     # maxlen?
+
+    mu_node = item_node.find(_('MeasurementUnitRef'))
+    unit = units[mu_node.attrib['MeasurementUnitOID']] if mu_node is not None else None
 
     q_node = item_node.find(_('Question'))
     if q_node is None:
@@ -164,6 +167,8 @@ def parse_item(item_node, code_lists):
         #return None
     else:
         label = q_node.find(_('TranslatedText')).text.strip()
+        if unit:
+            label += ' (in %s)' % unit
 
     choices_node = item_node.find(_('CodeListRef'))
     if choices_node is not None:
@@ -190,6 +195,14 @@ def parse_group(group_node, items):
     children = [get_child(c) for c in child_nodes]
 
     return QuestionGroup(id, name, children)
+
+def parse_units(node):
+    def parse_unit(unit):
+        id = unit.attrib['OID']
+        name = unit.find(_('Symbol')).find(_('TranslatedText')).text.strip()
+        return (id, name)
+
+    return dict(parse_unit(unit) for unit in node.findall('.//%s' % _('MeasurementUnit')))
 
 def parse_form(form_info, groups):
     child_nodes = form_info['node'].findall(_('ItemGroupRef'))
@@ -221,8 +234,9 @@ def parse_study(docroot):
     node = study.find(_('MetaDataVersion'))
     mdv = node.attrib['OID']
 
+    mu = parse_units(study)
     codelists = parse_code_lists(node)
-    questions = parse_items(node, codelists)
+    questions = parse_items(node, codelists, mu)
     groups = parse_groups(node, questions)
     forms = parse_forms(node, groups)
     rules = parse_rules(node.find(_('Rules', 'ocr')))
@@ -255,7 +269,7 @@ def inject_structure(form, rules):
         reg_group.items.extend([pat_id_verif, pat_id])
 
     rules.extend([
-        XRule('calculated', screening_complete, 'not(needs-screening(%s))', pat_id),
+        XRule('calculated', screening_complete, 'not(needs-screening(%s))', pat_id), # include the double-entry check in here too? to workaround ODK commiting answers when it's not supposed to
         XRule('relevancy', crf_group, 'not(%s)', screening_complete),
         XRule('relevancy', info_complete, '%s', screening_complete),
     ])
