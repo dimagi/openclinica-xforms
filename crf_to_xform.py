@@ -32,6 +32,8 @@ class XRule(object):
         self.expr = expr
         self._refs = _refs
 
+        self.constraint_msg = None
+
     def oid_or_obj(self, o):
         try:
             return o.id
@@ -231,13 +233,26 @@ def parse_study(docroot):
 def inject_structure(form, rules):
     crf_group = QuestionGroup('crf', None, form.items)
 
-    pat_id = Question('pat_id', 'PATIENT_ID', 'barcode', 'Patient ID', None)
-    pat_id.required = True
-    reg_group = QuestionGroup('subject', 'Patient Info', [pat_id])
-
     screening_complete = Question('screening_complete', None, None, None, None)
     info_complete = Question('info_screen_complete', None, 'info', 'A completed screening form is already on file for this patient.', None)
     tmp_group = QuestionGroup('tmp', None, [screening_complete, info_complete])
+
+    reg_group = QuestionGroup('subject', 'Patient Info', [])
+    BARCODE = False
+    if BARCODE:
+        pat_id = Question('pat_id', 'PATIENT_ID', 'barcode', 'Patient ID', None)
+        pat_id.required = True
+        reg_group.items.append(pat_id)
+    else:
+        PATID_DATATYPE = 'integer'
+        pat_id_verif = Question('_pat_id', 'PATIENT_ID_1', PATID_DATATYPE, 'Enter Patient ID', None)
+        pat_id = Question('pat_id', 'PATIENT_ID_2', PATID_DATATYPE, 'Verify Patient ID', None)
+        pat_id_verif.required = True
+        pat_id.required = True
+        dbl_entry_rule = XRule('constraint', pat_id, '. = %s', pat_id_verif)
+        rules.append(dbl_entry_rule)
+        dbl_entry_rule.constraint_msg = 'The patient IDs entered do not match!'
+        reg_group.items.extend([pat_id_verif, pat_id])
 
     rules.extend([
         XRule('calculated', screening_complete, 'not(needs-screening(%s))', pat_id),
@@ -404,8 +419,13 @@ def build_bind_rules(bind, o, rules, form):
     attr = {
         'relevancy': 'relevant',
         'calculated': 'calculate',
+        'constraint': 'constraint',
     }[rule.action]
     bind.attrib[attr] = rule.xpath(oid_to_ref)
+
+    if rule.action == 'constraint' and rule.constraint_msg:
+        bind.attrib[_('constraintMsg', 'jr')] = rule.constraint_msg
+
     return True
 
 noderefs = {}
