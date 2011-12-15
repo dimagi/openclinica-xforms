@@ -28,10 +28,11 @@ audio prompts, but that is not supported yet.
 
 to run proxy:
 
-> python proxy.py -u username -p password -f xform [--port port] openclinic_url
+> python proxy.py -u username -p password [-f xform] [--port port] openclinic_url
 
 -u, -p  credentials to authenticate with web service
 -f  xform file corresponding to the instances tablet is submitting
+    (note: not needed for the current submission mode)
 --port  listen port (default 8053)
 url  root url of openlinica install
      (https://64.119.157.114:8070/OpenClinica-ws/ for staging server)
