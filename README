@@ -1,0 +1,46 @@
+install dependencies:
+
+sudo pip install -r pip-requires.txt
+
+
+
+to convert a CRF xml export to xform:
+
+> python crf_to_xform.py [-d] [-t translations.csv] crf.xml
+
+crf.xml will be converted to xform and printed to stdout
+use '-' for crf.xml to read from stdin
+
+-d  dump a table of all text strings found in the crf to
+    itext_dump.csv, suitable for manual translation
+
+to add additional languages, edit the csv file. add a column for
+each new language. set the language code as the column header,
+and put the corresponding translation in each row. translations
+may be omitted, in which case it will fall back to the default
+language. in the future, this is also how you will associate
+audio prompts, but that is not supported yet.
+
+-t translations.csv  include the translations from the csv
+     file into the xform
+
+
+
+to run proxy:
+
+> python proxy.py -u username -p password -f xform [--port port] openclinic_url
+
+-u, -p  credentials to authenticate with web service
+-f  xform file corresponding to the instances tablet is submitting
+--port  listen port (default 8053)
+url  root url of openlinica install
+     (https://64.119.157.114:8070/OpenClinica-ws/ for staging server)
+
+when proxy boots it will download the necessary WDSLs, then start
+servicing requests from the tablet
+
+
+
+to configure tablet:
+
+set server url to url of proxy (including port)

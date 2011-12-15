@@ -20,7 +20,6 @@ logger.setLevel(logging.DEBUG)
 
 DEFAULT_PORT = 8053
 ODK_SUBMIT_PATH = 'submission'
-XFORM_PATH = '/home/drew/tmp/chintest.xml'
 
 def _async(callback, func):
     try:
@@ -37,8 +36,10 @@ def async(request, func):
     threading.Thread(target=_async, args=[request._respond, func]).start()
 
 class BaseHandler(web.RequestHandler):
-    def initialize(self, conn):
+    def initialize(self, conn, **kwargs):
         self.conn = conn
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
 
     @web.asynchronous
     def get(self):
@@ -100,7 +101,7 @@ class SubmitHandler(BaseHandler):
         xfinst = form_part.get_payload()
         logger.debug('received xform submission:\n%s' % util.dump_xml(xfinst, pretty=True))
 
-        resp = process_instance(xfinst, XFORM_PATH)
+        resp = process_instance(xfinst, self.xform_path)
         if resp['odm']:
             logger.debug('converted to odm:\n%s' % util.dump_xml(resp['odm'], pretty=True))
 
@@ -147,6 +148,8 @@ if __name__ == "__main__":
                       help="SOAP auth username")
     parser.add_option("-p", "--password", dest="password",
                       help="SOAP auth passwordt")
+    parser.add_option("-f", "--xform", dest="xform",
+                      help="source xform")
     parser.add_option("--port", dest="port", default=DEFAULT_PORT, type='int',
                       help="http listen port")
 
@@ -157,26 +160,8 @@ if __name__ == "__main__":
 
     application = web.Application([
         (r'/needs-screening', NeedsScreeningHandler, {'conn': conn}),
-        (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn}),
+        (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn, 'xform_path': options.xform}),
     ])
     application.listen(options.port)
     IOLoop.instance().start()
 
-"""
-needs-screening:
-
-patient-info
-
-submit
-
-#needs screening:
-
-given: patid
-
-patient exists, needs screen
-patient exists, no screen
-patient exists
-
-
-return whether pat e
-"""

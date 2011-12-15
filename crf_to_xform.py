@@ -255,7 +255,7 @@ def inject_structure(form, rules):
 
     # patient id entry
     reg_group = QuestionGroup('subject', 'Patient Info', [])
-    BARCODE = False
+    BARCODE = True
     if BARCODE:
         pat_id = Question('pat_id', 'PATIENT_ID', 'barcode', 'Patient ID', None)
         pat_id.required = True
@@ -526,6 +526,7 @@ def build_itext(parent_node, form, options):
         sys.stderr.write('dumping text to %s\n' % dumpfile)
         with open(dumpfile, 'w') as f:
             writer = csv.writer(f)
+            writer.writerow(['KEY', DEFAULT_LANG.upper()])
             for k, v in sorted(ref_idict.iteritems()):
                 writer.writerow([k, v.encode('utf-8')])
     
