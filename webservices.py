@@ -7,6 +7,7 @@ import urlparse
 import re
 import logging
 import util
+from contextlib import contextmanager
 
 SUBJ_WSDL = 'ws/studySubject/v1/studySubjectWsdl.wsdl'
 SE_WSDL = 'ws/event/v1/eventWsdl.wsdl'
@@ -36,8 +37,8 @@ def lookup_subject(conn, subj_id, study_id):
 
     # suds chokes on the valid response for this service, so dig into the
     # raw xml response instead
-    conn.set_options(retxml=True)
-    resp = conn.service.isStudySubject(subj)
+    with raw_xml(conn):
+        resp = conn.service.isStudySubject(subj)
     root = et.fromstring(resp)
     xmlns = urlparse.urljoin('http://openclinica.org/', conn.wsdl.services[0].ports[0].location[1:])
     result = root.findall('.//{%s}result' % xmlns)[0].text
@@ -90,6 +91,12 @@ def submit(conn, instnode):
         raise Exception([str(e) for e in resp.error])
 
 
+@contextmanager
+def raw_xml(conn):
+    conn.set_options(retxml=True)
+    yield
+    conn.set_options(retxml=False)
+
 
 def init_logging():
     logging.basicConfig(level=logging.INFO)
@@ -97,6 +104,7 @@ def init_logging():
     logging.getLogger('suds.transport').setLevel(logging.DEBUG)
     logging.getLogger('suds.xsd.schema').setLevel(logging.DEBUG)
     logging.getLogger('suds.wsdl').setLevel(logging.DEBUG)
+#init_logging()
 
 if __name__ == "__main__":
     
@@ -113,8 +121,8 @@ if __name__ == "__main__":
 #    SUBJ = 'K464347'
 
     conn = connect(SOAP_URL, SUBJ_WSDL, USER, PASS)
-    print lookup_subject(conn, SUBJ, 'CPCS')
-#    create_subject(conn, SUBJ, date.today(), 'f', 'CPCS')
+#    print lookup_subject(conn, SUBJ, 'CPCS')
+    create_subject(conn, SUBJ, date.today(), 'f', 'CPCS')
 
 #    conn = connect(SOAP_URL, SE_WSDL, USER, PASS)
 #    offset = timedelta(hours=1)
