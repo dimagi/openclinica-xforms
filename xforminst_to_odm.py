@@ -29,6 +29,7 @@ def build_submission(root, ref_instance, reconcile=False):
     def real_inst(root):
         return root.find(_i('crf'))
     crf_root = real_inst(root)
+    trim_instance(crf_root)
     if reconcile:
         crf_root = reconcile_instance(crf_root, real_inst(ref_instance))
 
@@ -63,6 +64,15 @@ def extract_subject(root, _):
     pat_id = patient_info.find(_('pat_id')).text
 
     return util.make_oid(pat_id, 'subj')
+
+def trim_instance(inst_node):
+    """remove temporary nodes from instance (starting with '__')"""
+    for child in list(inst_node):
+        _, tag = util.split_tag(child.tag)
+        if tag.startswith('__'):
+            inst_node.remove(child)
+        else:
+            trim_instance(child)
 
 def reconcile_instance(inst_node, ref_node):
     """xforms hides non-relevant nodes, but ODM expects them with empty

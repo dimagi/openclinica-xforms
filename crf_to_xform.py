@@ -99,10 +99,11 @@ class Question(object):
         return self.id
 
 class QuestionGroup(object):
-    def __init__(self, id, name, items):
+    def __init__(self, id, name, items, grouped=False):
         self.id = id
         self.name = name
         self.items = items
+        self.grouped = grouped
 
     def xpathname(self):
         return self.id
@@ -244,13 +245,15 @@ def parse_study(docroot):
     inject_structure(forms[0], rules)
     return (study_id, mdv), forms, rules
 
+def _find_item(form, id):
+    i = [n for n in _all_instance_nodes(form) if n.id == id][0]
+    parent = [n for n in _all_instance_nodes(form, True) if hasattr(n, 'items') and i in n.items][0]
+    return (i, parent)
+
 def inject_structure(form, rules):
     crf_group = QuestionGroup('crf', None, form.items)
 
-    screening_complete = Question('screening_complete', None, None, None, None)
-    info_complete = Question('info_screen_complete', None, 'info', 'A completed screening form is already on file for this patient.', None)
-    tmp_group = QuestionGroup('tmp', None, [screening_complete, info_complete])
-
+    # patient id entry
     reg_group = QuestionGroup('subject', 'Patient Info', [])
     BARCODE = False
     if BARCODE:
@@ -259,8 +262,8 @@ def inject_structure(form, rules):
         reg_group.items.append(pat_id)
     else:
         PATID_DATATYPE = 'integer'
-        pat_id_verif = Question('_pat_id', 'PATIENT_ID_1', PATID_DATATYPE, 'Enter Patient ID', None)
-        pat_id = Question('pat_id', 'PATIENT_ID_2', PATID_DATATYPE, 'Verify Patient ID', None)
+        pat_id_verif = Question('_pat_id', None, PATID_DATATYPE, 'Enter Patient ID', None)
+        pat_id = Question('pat_id', None, PATID_DATATYPE, 'Verify Patient ID', None)
         pat_id_verif.required = True
         pat_id.required = True
         dbl_entry_rule = XRule('constraint', pat_id, '. = %s', pat_id_verif)
@@ -268,11 +271,33 @@ def inject_structure(form, rules):
         dbl_entry_rule.constraint_msg = 'The patient IDs entered do not match!'
         reg_group.items.extend([pat_id_verif, pat_id])
 
+    # hook to check if screening needs to be filled out
+    screening_complete = Question('screening_complete', None, None, None, None)
+    info_complete = Question('info_screen_complete', None, 'info', 'A completed screening form is already on file for this patient.', None)
+    tmp_group = QuestionGroup('tmp', None, [screening_complete, info_complete])
+
     rules.extend([
         XRule('calculated', screening_complete, 'not(needs-screening(%s))', pat_id), # include the double-entry check in here too? to workaround ODK commiting answers when it's not supposed to
         XRule('relevancy', crf_group, 'not(%s)', screening_complete),
         XRule('relevancy', info_complete, '%s', screening_complete),
     ])
+
+    # convert height question to feet/inches
+    HEIGHT_ID = 'I_CPCS_HEIGHT'
+    INCH_SUFFIX = ' (in inches)' 
+    q_height, height_parent = _find_item(form, HEIGHT_ID)
+    if q_height.label.endswith(INCH_SUFFIX): #ghetto
+        height_ft = Question('height_feet', None, 'integer', q_height.label[:-len(INCH_SUFFIX)] + '\n\n(feet)', None)
+        height_in = Question('height_inches', None, 'integer', '(inches)', None)
+        q_height.label = None
+
+        qc_height = QuestionGroup('__%s' % HEIGHT_ID, None, [height_ft, height_in], True)
+        height_parent.items.insert(height_parent.items.index(q_height), qc_height)
+        rules.append(XRule('calculated', q_height, '12 * %s + %s', height_ft, height_in))
+
+    # kill literacy section
+    lit, parent = _find_item(form, 'IG_CPCS_LITERACY')
+    parent.items.remove(lit)
 
     form.items = [reg_group, crf_group, tmp_group]
 
@@ -457,7 +482,10 @@ def gen_refs(o, path=['']):
             for entry in gen_refs(child, list(path)):
                 yield entry
 
-def _all_instance_nodes(o):
+def _all_instance_nodes(o, include_root=False):
+    if include_root:
+        yield o
+
     if hasattr(o, 'items'):
         for child in o.items:
             yield child
@@ -542,10 +570,6 @@ def build_itext_entry(parent_node, ref, text):
 
 def build_body(node, form):
     for child in form.items:
-        #temp
-        if child.id == 'IG_CPCS_LITERACY':
-            continue
-
         node.append(build_body_item(child))
 
 def build_body_item(item):
@@ -555,6 +579,8 @@ def build_body_item(item):
         node.attrib['ref'] = item.xpathname()
         if item.name:
             make_label(node, item.id)
+        if item.grouped:
+            node.attrib['appearance'] = 'field-list' #'full'
         for child in item.items:
             childnode = build_body_item(child)
             if childnode:
