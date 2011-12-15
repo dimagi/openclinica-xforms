@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE
 import csv
 from optparse import OptionParser
 import util
+import json
 
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
@@ -228,7 +229,7 @@ def form_info(studyevent, formdefs):
     form_node = [n for n in formdefs if n.attrib['OID'] == latest_version][0]
     return {'id': id, 'version': latest_version, 'node': form_node}
 
-def parse_study(docroot):
+def parse_study(docroot, options={}):
     study = docroot.find(_('Study'))
     study_id = study.attrib['OID']
 
@@ -242,7 +243,7 @@ def parse_study(docroot):
     forms = parse_forms(node, groups)
     rules = parse_rules(node.find(_('Rules', 'ocr')))
 
-    inject_structure(forms[0], rules)
+    inject_structure(forms[0], rules, options)
     return (study_id, mdv), forms, rules
 
 def _find_item(form, id):
@@ -250,17 +251,17 @@ def _find_item(form, id):
     parent = [n for n in _all_instance_nodes(form, True) if hasattr(n, 'items') and i in n.items][0]
     return (i, parent)
 
-def inject_structure(form, rules):
+def inject_structure(form, rules, options):
     crf_group = QuestionGroup('crf', None, form.items)
 
     # patient id entry
     reg_group = QuestionGroup('subject', 'Patient Info', [])
-    BARCODE = True
-    if BARCODE:
+    pat_id_mode = options.get('pat_id', 'barcode')
+    if pat_id_mode == 'barcode':
         pat_id = Question('pat_id', 'PATIENT_ID', 'barcode', 'Patient ID', None)
         pat_id.required = True
         reg_group.items.append(pat_id)
-    else:
+    elif pat_id_mode == 'dbl-entry':
         PATID_DATATYPE = 'integer'
         pat_id_verif = Question('_pat_id', None, PATID_DATATYPE, 'Enter Patient ID', None)
         pat_id = Question('pat_id', None, PATID_DATATYPE, 'Verify Patient ID', None)
@@ -270,6 +271,8 @@ def inject_structure(form, rules):
         rules.append(dbl_entry_rule)
         dbl_entry_rule.constraint_msg = 'The patient IDs entered do not match!'
         reg_group.items.extend([pat_id_verif, pat_id])
+    else:
+        raise Exception('patient id entry mode [%s] not known' % pat_id_mode)
 
     # hook to check if screening needs to be filled out
     screening_complete = Question('screening_complete', None, None, None, None)
@@ -283,17 +286,20 @@ def inject_structure(form, rules):
     ])
 
     # convert height question to feet/inches
-    HEIGHT_ID = 'I_CPCS_HEIGHT'
-    INCH_SUFFIX = ' (in inches)' 
-    q_height, height_parent = _find_item(form, HEIGHT_ID)
-    if q_height.label.endswith(INCH_SUFFIX): #ghetto
-        height_ft = Question('height_feet', None, 'integer', q_height.label[:-len(INCH_SUFFIX)] + '\n\n(feet)', None)
-        height_in = Question('height_inches', None, 'integer', '(inches)', None)
-        q_height.label = None
+    height_ids = options.get('height', 'I_CPCS_HEIGHT')
+    if not hasattr(height_ids, '__iter__'):
+        height_ids = [height_ids]
+    for HEIGHT_ID in height_ids:
+        INCH_SUFFIX = ' (in inches)' 
+        q_height, height_parent = _find_item(form, HEIGHT_ID)
+        if q_height.label.endswith(INCH_SUFFIX): #ghetto
+            height_ft = Question('height_feet', None, 'integer', q_height.label[:-len(INCH_SUFFIX)] + '\n\n(feet)', None)
+            height_in = Question('height_inches', None, 'integer', '(inches)', None)
+            q_height.label = None
 
-        qc_height = QuestionGroup('__%s' % HEIGHT_ID, None, [height_ft, height_in], True)
-        height_parent.items.insert(height_parent.items.index(q_height), qc_height)
-        rules.append(XRule('calculated', q_height, '12 * %s + %s', height_ft, height_in))
+            qc_height = QuestionGroup('__%s' % HEIGHT_ID, None, [height_ft, height_in], True)
+            height_parent.items.insert(height_parent.items.index(q_height), qc_height)
+            rules.append(XRule('calculated', q_height, '12 * %s + %s', height_ft, height_in))
 
     # kill literacy section
     lit, parent = _find_item(form, 'IG_CPCS_LITERACY')
@@ -633,7 +639,7 @@ def create_audio(text, lang):
 
 def convert_xform(f, options={'dumptx': False, 'translations': None}):
     doc = et.parse(f)
-    study_id, forms, rules = parse_study(doc.getroot())
+    study_id, forms, rules = parse_study(doc.getroot(), options)
 
 #    util.pprint(forms)
 #    util.pprint(rules)
@@ -650,11 +656,16 @@ if __name__ == "__main__":
                       help="load translations from FILE", metavar="FILE")
     parser.add_option("-d", "--dumptext", action="store_true", dest="dumptx", default=False,
                       help="dump english text to csv for translation")
+    parser.add_option("-o", "--opts", dest="options", default='{}',
+                      help="custom options as json string")
 
     (options, args) = parser.parse_args()
 
+    opts = options.__dict__
+    opts.update(json.loads(options.options))
+
     crf = (sys.stdin if args[0] == '-' else open(args[0]))
-    print util.dump_xml(convert_xform(crf, options.__dict__), pretty=True)
+    print util.dump_xml(convert_xform(crf, opts), pretty=True)
 
 
 
