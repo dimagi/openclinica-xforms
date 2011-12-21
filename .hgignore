@@ -5,3 +5,6 @@ syntax: glob
 parsetab.py
 parser.out
 itext_dump.csv
+.metadata/
+.settings/
+bin/
