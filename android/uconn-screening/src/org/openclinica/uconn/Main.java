@@ -18,14 +18,17 @@ public class Main extends Activity {
         setContentView(R.layout.main);
     }
 
+    public static final int REQUEST_FORM_ENTRY = 1;
+    public static final int REQUEST_FORM_SUBMIT = 2;
+    
     public void startScreening(View v) {
     	//invoke ODK
     	
     	String AUTHORITY = "org.odk.collect.android.provider.odk.forms";
     	Uri FORMS_BASE_URI = Uri.parse("content://" + AUTHORITY + "/forms");
     	String FORM_ID_COL = "jrFormId";
-    	String SCREENING_FORM_ID = "http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/";
-   
+    	String SCREENING_FORM_ID = "ttsdemo"; //"http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/";
+    	
     	long formID = -1;
     	Cursor c = managedQuery(FORMS_BASE_URI, null, FORM_ID_COL + " = '" + SCREENING_FORM_ID + "'", null, null);
    	    if (c.moveToFirst()) {
@@ -38,14 +41,18 @@ public class Main extends Activity {
    	    }
    	    
    	    Uri formUri = ContentUris.withAppendedId(FORMS_BASE_URI, formID);
-   	    startActivityForResult(new Intent(Intent.ACTION_EDIT, formUri), 0);
+   	    startActivityForResult(new Intent(Intent.ACTION_EDIT, formUri), REQUEST_FORM_ENTRY);
     }
     
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-    	if (requestCode == 0) {
+    	if (requestCode == REQUEST_FORM_ENTRY) {
     		if (resultCode == RESULT_OK) {
-    			Log.i("got result", data.getData().toString());
-    		}	
+    			Uri instanceUri = data.getData();
+    	   	    startActivityForResult(new Intent(Intent.ACTION_SYNC, instanceUri), REQUEST_FORM_SUBMIT);
+
+//    			Intent intent = new Intent("org.odk.collect.android.application.Collect.activities.InstanceUploaderActivity");
+//    			intent.putExtra("instances", new Long[] {333L});
+    		}
     	}
     }
     
