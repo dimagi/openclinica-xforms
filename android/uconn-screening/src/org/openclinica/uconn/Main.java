@@ -1,7 +1,14 @@
 package org.openclinica.uconn;
 
 import android.app.Activity;
+import android.content.ContentUris;
+import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.BaseColumns;
+import android.util.Log;
+import android.view.View;
 
 public class Main extends Activity {
     /** Called when the activity is first created. */
@@ -10,4 +17,36 @@ public class Main extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
     }
+
+    public void startScreening(View v) {
+    	//invoke ODK
+    	
+    	String AUTHORITY = "org.odk.collect.android.provider.odk.forms";
+    	Uri FORMS_BASE_URI = Uri.parse("content://" + AUTHORITY + "/forms");
+    	String FORM_ID_COL = "jrFormId";
+    	String SCREENING_FORM_ID = "http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/";
+   
+    	long formID = -1;
+    	Cursor c = managedQuery(FORMS_BASE_URI, null, FORM_ID_COL + " = '" + SCREENING_FORM_ID + "'", null, null);
+   	    if (c.moveToFirst()) {
+   		    do {
+   		    	formID = c.getLong(c.getColumnIndex(BaseColumns._ID));
+   		    } while (c.moveToNext());
+   	    }
+   	    if (formID == -1) {
+   	    	throw new RuntimeException("can't find screening form! [" + SCREENING_FORM_ID + "]");
+   	    }
+   	    
+   	    Uri formUri = ContentUris.withAppendedId(FORMS_BASE_URI, formID);
+   	    startActivityForResult(new Intent(Intent.ACTION_EDIT, formUri), 0);
+    }
+    
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    	if (requestCode == 0) {
+    		if (resultCode == RESULT_OK) {
+    			Log.i("got result", data.getData().toString());
+    		}	
+    	}
+    }
+    
 }

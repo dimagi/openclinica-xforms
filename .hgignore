@@ -8,3 +8,4 @@ itext_dump.csv
 .metadata/
 .settings/
 bin/
+gen/
