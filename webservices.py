@@ -14,7 +14,12 @@ SE_WSDL = 'ws/event/v1/eventWsdl.wsdl'
 DATA_WSDL = 'ws/data/v1/dataWsdl.wsdl'
 
 def connect(base_url, wsdl, user, passwd):
-    client = Client(urlparse.urljoin(base_url, wsdl))
+    if not base_url.endswith('/'):
+        base_url += '/'
+    wsdl_url = urlparse.urljoin(base_url, wsdl)
+
+    client = Client(wsdl_url)
+    logging.info('fetched wsdl %s' % wsdl_url)
 
     # this doesn't seem safe...
     endpoint = client.wsdl.services[0].ports[0].location[1:] # trim leading slash

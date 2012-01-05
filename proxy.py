@@ -111,6 +111,8 @@ class SubmitHandler(BaseHandler):
                                             resp['location'], resp['start'], resp['end'], resp['study_id'])
             self.conn.submit(resp['odm'])
         
+        #TODO: return report url, e.g.
+        # /OpenClinica/ClinicalData/html/view/S_CPCS/320999/SE_CPCS[1]/F_CPCS_1?&tabId=1&exitTo=ViewStudySubject
         return 'processed successfully'
 
     def _success(self, result):
@@ -163,5 +165,6 @@ if __name__ == "__main__":
         (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn, 'xform_path': options.xform}),
     ])
     application.listen(options.port)
-    IOLoop.instance().start()
+    logging.info('proxy initialized and ready to take requests')
 
+    IOLoop.instance().start()
