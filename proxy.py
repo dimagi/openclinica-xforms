@@ -2,6 +2,7 @@ import sys
 from tornado.ioloop import IOLoop
 import tornado.web as web
 from tornado.httpclient import HTTPError
+from tornado.template import Template
 import threading
 import logging
 import os
@@ -13,6 +14,7 @@ from urlparse import urlparse, parse_qs
 import email
 from xforminst_to_odm import process_instance
 import util
+from datetime import datetime
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger('proxy')
@@ -119,6 +121,41 @@ class SubmitHandler(BaseHandler):
         self.set_status(202)
         self.set_header('Content-Type', 'text/plain')
         self.write(result)
+
+class DashboardHandler(web.RequestHandler):
+    def initialize(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+    def get(self):
+        t = Template("""
+<html>
+<head>
+<title>proxy dashboard</title>
+</head>
+<body>
+<style>body{font-family: sans-serif;}</style>
+<h1>ODK-UCONN&mdash;OpenClinica Proxy</h1>
+<p>It's up! (since {{ boot.strftime('%Y-%m-%d %H:%M:%S UTC') }})</p>
+WSDLs loaded:
+<ul>
+{% for wsdl in wsdls %}
+<li>{{ wsdl }}</li>
+{% end %}
+</ul>
+</body>
+</html>
+""")
+
+        wsdls = sorted([v.options.location for k, v in self.conn.wsdl.iteritems()])
+
+        self.set_status(200)
+        self.set_header('Content-Type', 'text/html')
+        self.write(t.generate(**{
+            'wsdls': wsdls,
+            'boot': self.boot,
+        }))
+        
         
 
 class WSDL(object):
@@ -161,6 +198,7 @@ if __name__ == "__main__":
     conn = WSDL(url, options.user, options.password)
 
     application = web.Application([
+        (r'/', DashboardHandler, {'conn': conn, 'boot': datetime.utcnow()}),
         (r'/needs-screening', NeedsScreeningHandler, {'conn': conn}),
         (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn, 'xform_path': options.xform}),
     ])
