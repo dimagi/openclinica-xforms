@@ -53,6 +53,9 @@ def t_STR(t):
 
 t_ignore = " \t\n"
 
+def t_error(t):
+    pass
+
 lexer = lex.lex()
 
 precedence = (
@@ -111,6 +114,9 @@ def p_op_expr(t):
         except KeyError:
             op = t[2]
         t[0] = (op, t[1], t[3])
+
+def p_error(t):
+    raise Exception('syntax error')
 
 parser = yacc.yacc()
 
