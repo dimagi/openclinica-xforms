@@ -113,7 +113,7 @@ def init_logging():
 
 if __name__ == "__main__":
     
-    SOAP_URL = 'https://64.119.157.114:8070/OpenClinica-ws/'
+    SOAP_URL = 'https://75.144.154.137:8070/OpenClinica-ws/'
     USER = 'droos'
     PASS = 'password'
 

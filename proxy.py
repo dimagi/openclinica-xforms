@@ -113,9 +113,8 @@ class SubmitHandler(BaseHandler):
                                             resp['location'], resp['start'], resp['end'], resp['study_id'])
             self.conn.submit(resp['odm'])
         
-        #TODO: return report url, e.g.
-        # /OpenClinica/ClinicalData/html/view/S_CPCS/320999/SE_CPCS[1]/F_CPCS_1?&tabId=1&exitTo=ViewStudySubject
-        return 'processed successfully'
+        #TODO: return a well-formed report url, e.g.
+        return '/OpenClinica/ClinicalData/html/view/S_CPCS/320999/SE_CPCS[1]/F_CPCS_1?&tabId=1&exitTo=ViewStudySubject'
 
     def _success(self, result):
         self.set_status(202)

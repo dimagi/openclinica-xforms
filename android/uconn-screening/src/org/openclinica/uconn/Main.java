@@ -27,7 +27,7 @@ public class Main extends Activity {
     	String AUTHORITY = "org.odk.collect.android.provider.odk.forms";
     	Uri FORMS_BASE_URI = Uri.parse("content://" + AUTHORITY + "/forms");
     	String FORM_ID_COL = "jrFormId";
-    	String SCREENING_FORM_ID = "ttsdemo"; //"http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/";
+    	String SCREENING_FORM_ID = "http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/";
     	
     	long formID = -1;
     	Cursor c = managedQuery(FORMS_BASE_URI, null, FORM_ID_COL + " = '" + SCREENING_FORM_ID + "'", null, null);
@@ -49,9 +49,12 @@ public class Main extends Activity {
     		if (resultCode == RESULT_OK) {
     			Uri instanceUri = data.getData();
     	   	    startActivityForResult(new Intent(Intent.ACTION_SYNC, instanceUri), REQUEST_FORM_SUBMIT);
-
-//    			Intent intent = new Intent("org.odk.collect.android.application.Collect.activities.InstanceUploaderActivity");
-//    			intent.putExtra("instances", new Long[] {333L});
+    		}
+    	} else if (requestCode == REQUEST_FORM_SUBMIT) {
+    		if (resultCode == RESULT_OK) {
+    			String resp = data.getExtras().getString("response");
+    			
+    			Log.i("got result2", resp);
     		}
     	}
     }
