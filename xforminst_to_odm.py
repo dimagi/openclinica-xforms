@@ -31,6 +31,8 @@ def build_submission(root, ref_instance, reconcile=False):
     crf_root = real_inst(root)
     trim_instance(crf_root)
     if reconcile:
+        if ref_instance is None:
+            raise Exception('source xform must be supplied during ODM conversion if using reconciliation mode')
         crf_root = reconcile_instance(crf_root, real_inst(ref_instance))
 
     odm = et.Element(_('ODM'))
@@ -109,7 +111,12 @@ def convert_instance(in_node, out_node, form_name=None):
 
 def convert_odm(f, source):
     doc = et.parse(f)
-    return build_submission(doc.getroot(), list(source.find('.//%s' % _('instance', 'xf')))[0])
+    if source:
+        ref_instance = list(source.find('.//%s' % _('instance', 'xf')))[0]
+    else:
+        ref_instance = None
+
+    return build_submission(doc.getroot(), ref_instance)
 
 def process_instance(xfinst, xform_path):
     resp = {}
@@ -126,6 +133,9 @@ def process_instance(xfinst, xform_path):
     return resp
 
 def load_source(xform_path=None, crf_path=None):
+    if not xform_path and not crf_path:
+        return None
+
     with open(xform_path or crf_path) as f:
         if xform_path:
             return et.parse(f).getroot()
