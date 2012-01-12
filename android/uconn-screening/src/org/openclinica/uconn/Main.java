@@ -54,9 +54,11 @@ public class Main extends Activity {
     		if (resultCode == RESULT_OK) {
     			String resp = data.getExtras().getString("response");
     			
-    			Log.i("got result2", resp);
+    			Intent i = new Intent(this, ResultsActivity.class);
+    			i.putExtra("url", resp);
+    			startActivity(i);
     		}
     	}
     }
-    
+        
 }

@@ -127,11 +127,11 @@ if __name__ == "__main__":
 #    print lookup_subject(conn, SUBJ, 'CPCS')
     create_subject(conn, SUBJ, date.today(), 'f', 'CPCS')
 
-#    conn = connect(SOAP_URL, SE_WSDL, USER, PASS)
-#    offset = timedelta(hours=1)
-#    event_num = sched(conn, SUBJ, 'SE_CPCS', 'burgdorf', datetime.now() - timedelta(minutes=5) + offset, datetime.now() + offset, 'CPCS')
+    conn = connect(SOAP_URL, SE_WSDL, USER, PASS)
+    offset = timedelta(hours=1)
+    event_num = sched(conn, SUBJ, 'SE_CPCS', 'burgdorf', datetime.now() - timedelta(minutes=5) + offset, datetime.now() + offset, 'CPCS')
 
-#    conn = connect(SOAP_URL, DATA_WSDL, USER, PASS)
-#    with open('/home/drew/tmp/crfinst.xml') as f:
-#        submit(conn, f)
+    conn = connect(SOAP_URL, DATA_WSDL, USER, PASS)
+    with open('/home/drew/tmp/crfinst.xml') as f:
+        submit(conn, et.parse(f).getroot())
 
