@@ -1,6 +1,7 @@
 import re
 from xml.etree import ElementTree as et
 from StringIO import StringIO
+import urlparse
 
 def strip_namespaces(node):
     node.tag = split_tag(node.tag)[1]
@@ -68,3 +69,8 @@ def strip_oid(id, type):
     prefix = '%s_' % oid_prefix(type)
     assert id.startswith(prefix)
     return id[len(prefix):]
+
+def urlconcat(base, tail):
+    if not base.endswith('/'):
+        base += '/'
+    return urlparse.urljoin(base, tail)

@@ -53,6 +53,7 @@ def build_submission(root, ref_instance, reconcile=False):
         'study_id': util.strip_oid(metadata['study'], 'study'),
         'studyevent_id': metadata['studyevent'],
         'subject_id': util.strip_oid(subject, 'subj'),
+        'form_id': metadata['form'],
 
         'location': 'BURGDORF', #config var?
         'start': datetime.now(), #TODO link to TimeStart

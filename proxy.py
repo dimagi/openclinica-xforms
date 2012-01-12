@@ -112,9 +112,15 @@ class SubmitHandler(BaseHandler):
             event_ix = self.conn.sched_event(resp['subject_id'], resp['studyevent_id'],
                                             resp['location'], resp['start'], resp['end'], resp['study_id'])
             self.conn.submit(resp['odm'])
-        
-        #TODO: return a well-formed report url, e.g.
-        return '/OpenClinica/ClinicalData/html/view/S_CPCS/320999/SE_CPCS[1]/F_CPCS_1?&tabId=1&exitTo=ViewStudySubject'
+
+            url_root = 'OpenClinica'.join(self.conn.base_url.split('OpenClinica-ws'))
+            resp.update({
+                'event_ordinal': event_ix, 
+                'study_oid': util.make_oid(resp['study_id'], 'study'),
+                'form_id': 'F_CPCS_RESULTS_1', # i can't find a way to not hard-code this at the moment
+            })
+            url_rel = 'ClinicalData/html/view/%(study_oid)s/%(subject_id)s/%(studyevent_id)s[%(event_ordinal)d]/%(form_id)s?&tabId=1&exitTo=ViewStudySubject' % resp
+            return util.urlconcat(url_root, url_rel)
 
     def _success(self, result):
         self.set_status(202)
@@ -162,6 +168,7 @@ class WSDL(object):
         def conn(wsdl):
             return ws.connect(url, wsdl, user, password)
 
+        self.base_url = url
         self.wsdl = {
             'subj': conn(ws.SUBJ_WSDL),
             'se': conn(ws.SE_WSDL),
