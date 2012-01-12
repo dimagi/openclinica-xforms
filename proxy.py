@@ -113,19 +113,24 @@ class SubmitHandler(BaseHandler):
                                             resp['location'], resp['start'], resp['end'], resp['study_id'])
             self.conn.submit(resp['odm'])
 
-            url_root = 'OpenClinica'.join(self.conn.base_url.split('OpenClinica-ws'))
-            resp.update({
-                'event_ordinal': event_ix, 
-                'study_oid': util.make_oid(resp['study_id'], 'study'),
-                'form_id': 'F_CPCS_RESULTS_1', # i can't find a way to not hard-code this at the moment
-            })
-            url_rel = 'ClinicalData/html/view/%(study_oid)s/%(subject_id)s/%(studyevent_id)s[%(event_ordinal)d]/%(form_id)s?&tabId=1&exitTo=ViewStudySubject' % resp
-            return util.urlconcat(url_root, url_rel)
+            resp.update({'event_ix': event_ix})
+            return report_url(self.conn.base_url, **resp)
 
     def _success(self, result):
         self.set_status(202)
         self.set_header('Content-Type', 'text/plain')
         self.write(result)
+
+def report_url(base_url, **kwargs):
+    kwargs.update({
+        'study_oid': util.make_oid(kwargs['study_id'], 'study'),
+        'form_id': 'F_CPCS_RESULTS_1', # i can't find a way to not hard-code this at the moment
+    })
+    url_root = 'OpenClinica'.join(base_url.split('OpenClinica-ws'))
+    url_rel = 'ClinicalData/html/view/%(study_oid)s/%(subject_id)s/%(studyevent_id)s[%(event_ix)d]/%(form_id)s?&tabId=1&exitTo=ViewStudySubject' % kwargs
+    return util.urlconcat(url_root, url_rel)
+
+
 
 class DashboardHandler(web.RequestHandler):
     def initialize(self, **kwargs):
