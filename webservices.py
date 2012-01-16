@@ -57,7 +57,7 @@ def create_subject(conn, subj_id, enrolled_on, gender, study_id):
     subj.label = subj_id
     subj.enrollmentDate = enrolled_on.strftime('%Y-%m-%d')
     subj.subject = conn.factory.create('ns0:subjectType')
-    subj.subject.uniqueIdentifier = subj_id
+    #subj.subject.uniqueIdentifier = subj_id
     #subject dob?
     subj.subject.gender = gender
     subj.studyRef = conn.factory.create('ns0:studyRefType')
@@ -120,8 +120,8 @@ if __name__ == "__main__":
     import random
     from datetime import datetime, date, timedelta
 
-    SUBJ = 'K%06d' % random.randint(0, 999999)
-#    SUBJ = 'K464347'
+#    SUBJ = 'K%06d' % random.randint(0, 999999)
+    SUBJ = '385564'
 
     conn = connect(SOAP_URL, SUBJ_WSDL, USER, PASS)
 #    print lookup_subject(conn, SUBJ, 'CPCS')
