@@ -1,0 +1,86 @@
+<h:html xmlns="http://www.w3.org/2002/xforms"
+        xmlns:h="http://www.w3.org/1999/xhtml"
+        xmlns:ev="http://www.w3.org/2001/xml-events"
+        xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+        xmlns:jr="http://openrosa.org/javarosa">
+<h:head>
+  <h:title>Patient registration</h:title>
+  <model>
+		<instance>
+			<reg xmlns="http://dimagi.com/uconn-screening/patient-reg">
+         <pat_id />
+         <demog>
+           <initials />
+           <birthdate />
+           <gender />
+           <lang />
+           <low_literacy />
+         </demog>
+         <tmp>
+           <pat_id>
+             <scan />
+             <manual_1 />
+             <manual_2 />
+           </pat_id>
+         </tmp>
+			</reg>
+		</instance>
+	
+    <bind nodeset="tmp/pat_id/scan" type="barcode" required="true()" relevant="context('patid-mode') = 'scan'" />
+    <bind nodeset="tmp/pat_id/manual_1" type="int" required="true()" relevant="context('patid-mode') = 'dbl-entry'" />
+    <bind nodeset="tmp/pat_id/manual_2" type="int" required="true()" relevant="context('patid-mode') = 'dbl-entry'"
+          constraint=". = ../manual_1" jr:constraintMsg="The patient IDs entered do not match!"/>
+    <bind nodeset="pat_id" calculate="if(context('patid-mode') = 'scan', /reg/tmp/pat_id/scan, /reg/tmp/pat_id/manual_1)" />
+
+	  <bind nodeset="demog" relevant="not(context('lookup-only'))" />
+
+    <bind nodeset="demog/initials" required="true()" />
+    <bind nodeset="demog/birthdate" type="date" required="true()" /> <!-- range constraint -->
+    <bind nodeset="demog/gender" required="true()" />
+    <bind nodeset="demog/lang" required="true()" />
+    <bind nodeset="demog/low_literacy" required="true()" />
+
+	</model>
+</h:head>			
+<h:body>
+
+  <input ref="tmp/pat_id/scan">
+    <label>Scan Patient Barcode</label>
+  </input>
+
+  <input ref="tmp/pat_id/manual_1">
+    <label>Enter Patient ID</label>
+  </input>
+
+  <input ref="tmp/pat_id/manual_2">
+    <label>Verify Patient ID</label>
+  </input>
+
+  <input ref="demog/initials">
+    <label>Patient Initials</label>
+  </input>
+
+  <select1 ref="demog/gender">
+    <label>Gender</label>
+    <item><label>Male</label><value>m</value></item>
+    <item><label>Female</label><value>f</value></item>
+  </select1>
+
+  <input ref="demog/birthdate">
+    <label>Date of Birth</label>
+  </input>
+
+  <select1 ref="demog/lang">
+    <label>What language will the patient use to complete the screening form?</label>
+    <item><label>English</label><value>en</value></item>
+    <item><label>Spanish</label><value>es</value></item>
+  </select1>
+
+  <select1 ref="demog/low_literacy">
+    <label>Can the patient read fluently?</label>
+    <item><label>Yes</label><value>y</value></item>
+    <item><label>No, they require audio assistance to complete the form</label><value>n</value></item>
+  </select1>
+
+</h:body>
+</h:html>
