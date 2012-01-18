@@ -124,10 +124,11 @@ class SubmitHandler(BaseHandler):
 def report_url(base_url, **kwargs):
     kwargs.update({
         'study_oid': util.make_oid(kwargs['study_id'], 'study'),
+        'subj_oid': util.make_oid(kwargs['subject_id'], 'subj'),
         'form_id': 'F_CPCS_RESULTS_1', # i can't find a way to not hard-code this at the moment
     })
     url_root = 'OpenClinica'.join(base_url.split('OpenClinica-ws'))
-    url_rel = 'ClinicalData/html/view/%(study_oid)s/%(subject_id)s/%(studyevent_id)s[%(event_ix)d]/%(form_id)s?&tabId=1&exitTo=ViewStudySubject' % kwargs
+    url_rel = 'ClinicalData/html/view/%(study_oid)s/%(subj_oid)s/%(studyevent_id)s[%(event_ix)d]/%(form_id)s?&tabId=1' % kwargs
     return util.urlconcat(url_root, url_rel)
 
 

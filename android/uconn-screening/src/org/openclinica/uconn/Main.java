@@ -27,7 +27,7 @@ public class Main extends Activity {
     	String AUTHORITY = "org.odk.collect.android.provider.odk.forms";
     	Uri FORMS_BASE_URI = Uri.parse("content://" + AUTHORITY + "/forms");
     	String FORM_ID_COL = "jrFormId";
-    	String SCREENING_FORM_ID = "http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/";
+    	String SCREENING_FORM_ID = "http://dimagi.com/uconn-screening/patient-reg"; //"http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/";
     	
     	long formID = -1;
     	Cursor c = managedQuery(FORMS_BASE_URI, null, FORM_ID_COL + " = '" + SCREENING_FORM_ID + "'", null, null);
