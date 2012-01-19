@@ -1,6 +1,5 @@
 package org.openclinica.uconn;
 
-import java.util.Collections;
 import java.util.List;
 
 import android.content.ContentProvider;
@@ -9,12 +8,11 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.provider.BaseColumns;
-import android.util.Log;
 
-public class ContextProvider extends ContentProvider {
+public class SettingsProvider extends ContentProvider {
 	
 	public static final String AUTHORITY = "org.dimagi.uconn.screening";
-	public static final Uri CONTEXT_BASE_URI = Uri.parse("content://" + AUTHORITY + "/context");
+	public static final Uri CONTEXT_BASE_URI = Uri.parse("content://" + AUTHORITY + "/settings");
 	
 	@Override
 	public String getType(Uri uri) {
@@ -39,9 +37,7 @@ public class ContextProvider extends ContentProvider {
 
 	protected Object getValue(String key) {
 		if (key.equals("patid-mode")) {
-			return "dbl-entry";
-		} else if (key.equals("lookup-only")) {
-			return true;
+			return "dbl-entry"; //TODO pull from an app setting ('scan' or 'dbl-entry')
 		} else {
 			return null;
 		}

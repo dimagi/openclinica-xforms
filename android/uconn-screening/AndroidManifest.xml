@@ -16,7 +16,7 @@
    		<activity android:name=".ResultsActivity"
 			android:label="@string/app_name" />
 		<provider
-			android:name=".ContextProvider"
+			android:name=".SettingsProvider"
 			android:authorities="org.dimagi.uconn.screening" />
     </application>
 	<uses-permission android:name="android.permission.INTERNET" />
