@@ -51,14 +51,15 @@ def lookup_subject(conn, subj_id, study_id):
     else:
         return None
 
-def create_subject(conn, subj_id, enrolled_on, gender, study_id):
+def create_subject(conn, subj_id, enrolled_on, gender, name, study_id):
     subj = conn.factory.create('ns0:studySubjectType')
 
     subj.label = subj_id
+    subj.secondaryLabel = name
     subj.enrollmentDate = enrolled_on.strftime('%Y-%m-%d')
     subj.subject = conn.factory.create('ns0:subjectType')
-    #subj.subject.uniqueIdentifier = subj_id
-    #subject dob?
+    #subj.subject.uniqueIdentifier = subj_id   # not needed, apparently
+    #subj.subject.dateOfBirth = birthdate.strftime('%Y-%m-%d')  # don't care about collecting dob
     subj.subject.gender = gender
     subj.studyRef = conn.factory.create('ns0:studyRefType')
     subj.studyRef.identifier = study_id
@@ -121,11 +122,11 @@ if __name__ == "__main__":
     from datetime import datetime, date, timedelta
 
 #    SUBJ = 'K%06d' % random.randint(0, 999999)
-    SUBJ = '385564'
+    SUBJ = '10003'
 
     conn = connect(SOAP_URL, SUBJ_WSDL, USER, PASS)
 #    print lookup_subject(conn, SUBJ, 'CPCS')
-    create_subject(conn, SUBJ, date.today(), 'f', 'CPCS')
+    create_subject(conn, SUBJ, date.today(), 'f', 'mike', 'CPCS')
 
     conn = connect(SOAP_URL, SE_WSDL, USER, PASS)
     offset = timedelta(hours=1)

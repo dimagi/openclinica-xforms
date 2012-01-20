@@ -1,0 +1,45 @@
+<h:html xmlns="http://www.w3.org/2002/xforms"
+        xmlns:h="http://www.w3.org/1999/xhtml"
+        xmlns:ev="http://www.w3.org/2001/xml-events"
+        xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+        xmlns:jr="http://openrosa.org/javarosa">
+<h:head>
+  <h:title>Patient ID</h:title>
+  <model>
+		<instance>
+			<pat_id xmlns="http://dimagi.com/uconn-screening/patient-id">
+         <pat_id />
+         <tmp>
+           <pat_id>
+             <scan />
+             <manual_1 />
+             <manual_2 />
+           </pat_id>
+         </tmp>
+			</pat_id>
+		</instance>
+	
+    <bind nodeset="tmp/pat_id/scan" type="barcode" required="true()" relevant="setting('patid-mode') = 'scan'" />
+    <bind nodeset="tmp/pat_id/manual_1" type="int" required="true()" relevant="setting('patid-mode') = 'dbl-entry'" />
+    <bind nodeset="tmp/pat_id/manual_2" type="int" required="true()" relevant="setting('patid-mode') = 'dbl-entry'"
+          constraint=". = ../manual_1" jr:constraintMsg="The patient IDs entered do not match!"/>
+    <bind nodeset="pat_id" calculate="if(setting('patid-mode') = 'scan', /pat_id/tmp/pat_id/scan, /pat_id/tmp/pat_id/manual_1)" />
+
+	</model>
+</h:head>			
+<h:body>
+
+  <input ref="tmp/pat_id/scan">
+    <label>Scan Patient Barcode</label>
+  </input>
+
+  <input ref="tmp/pat_id/manual_1">
+    <label>Enter Patient ID</label>
+  </input>
+
+  <input ref="tmp/pat_id/manual_2">
+    <label>Verify Patient ID</label>
+  </input>
+
+</h:body>
+</h:html>

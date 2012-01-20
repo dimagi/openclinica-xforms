@@ -55,11 +55,12 @@ def build_submission(root, ref_instance, reconcile=False):
         'subject_id': util.strip_oid(subject, 'subj'),
         'form_id': metadata['form'],
 
-        'location': 'BURGDORF', #config var?
+        'location': 'BURGDORF', #TODO make config var
         'start': datetime.now(), #TODO link to TimeStart
         'end': datetime.now(), #TODO link to TimeEnd
-        'birthdate': date(1983, 10, 6), #TODO link to xf question
+        #'birthdate': date(1983, 10, 6), #birthdate is not used for this project
         'gender': 'f', #TODO link to xf question
+        'name': 'degracious', #TODO link to patient initials
     }
 
 def extract_subject(root, _):

@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.provider.BaseColumns;
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 public class Main extends Activity {
     /** Called when the activity is first created. */
@@ -29,30 +30,48 @@ public class Main extends Activity {
         setContentView(R.layout.main);
     }
 
-    public static final int REQ_SCREENING_REG = 1;
-    public static final int REQ_SCREENING_ENTRY = 2;
-    public static final int REQ_SCREENING_SUBMIT = 3;
-    public static final int REQ_SCREENING_LOOKUP = 4;
+    public static final int REQ_SCREENING_ID_ENTRY = 1;
+    public static final int REQ_SCREENING_PAT_REG = 2;
+    public static final int REQ_SCREENING_MAIN = 3;
+    public static final int REQ_SCREENING_SUBMIT = 4;
+    public static final int REQ_SCREENING_LOOKUP = 5;
     
+	public static final String PATID_FORM_ID = "http://dimagi.com/uconn-screening/patient-id";
 	public static final String REG_FORM_ID = "http://dimagi.com/uconn-screening/patient-reg";
 	public static final String SCREENING_FORM_ID = "http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/";
 
     public void startScreening(View v) {
+    	launchFormEntry(PATID_FORM_ID, REQ_SCREENING_ID_ENTRY, null);
+    }
+    
+    public void loadScreening(View v) {
+    	launchFormEntry(PATID_FORM_ID, REQ_SCREENING_LOOKUP, null);
+    }
+
+    public void startScreeningReg(Uri instanceUri) {
+    	InstanceData inst = getFormInstance(instanceUri);
     	Bundle context = new Bundle();
-    	context.putBoolean("lookup-only", false);
-    	launchFormEntry(REG_FORM_ID, REQ_SCREENING_REG, context);
+    	context.putString("pat-id", inst.get("/pat_id/pat_id"));
+    	launchFormEntry(REG_FORM_ID, REQ_SCREENING_PAT_REG, context);
     }
     
     public void startScreeningPatient(Uri instanceUri) {
     	InstanceData inst = getFormInstance(instanceUri);
-    	Log.i("plsplspls", inst.get("/reg/pat_id"));
-    	Log.i("plsplspls", inst.get("/reg/demog/initials"));
+    	String patientID = inst.get("/reg/pat_id");
+    	String initials = inst.get("/reg/initials");
+    	String lang = inst.get("/reg/lang");
+    	boolean lowliteracy = "y".equals(inst.get("/reg/low_literacy"));
+
+    	Bundle context = new Bundle();
+    	context.putString("pat-id", patientID);
+    	context.putString("initials", initials);
+    	launchFormEntry(SCREENING_FORM_ID, REQ_SCREENING_MAIN, context);
     }
     
-    public void loadScreening(View v) {
-    	Bundle context = new Bundle();
-    	context.putBoolean("lookup-only", true);
-    	launchFormEntry(REG_FORM_ID, REQ_SCREENING_LOOKUP, context);
+    public String lookupPatient(Uri uri) {
+    	InstanceData inst = getFormInstance(uri);
+    	String patientID = inst.get("/pat_id/pat_id");
+    	return PatientLookup.screeningReportURL(patientID);
     }
     
     public Uri formByNamespace(String xmlns) {
@@ -78,6 +97,12 @@ public class Main extends Activity {
     	Intent i = new Intent(Intent.ACTION_EDIT, formByNamespace(xmlns));
     	i.putExtra("contextvars", context);
     	startActivityForResult(i, requestCode);
+    }
+    
+    protected void launchViewReport(String reportURL) {
+		Intent i = new Intent(this, ResultsActivity.class);
+		i.putExtra("url", reportURL);
+		startActivity(i);
     }
     
     public interface InstanceData {
@@ -119,15 +144,34 @@ public class Main extends Activity {
     		return;
     	}
     	
-    	if (requestCode == REQ_SCREENING_REG) {
+    	if (requestCode == REQ_SCREENING_ID_ENTRY) {
+    		String screeningReport = lookupPatient(data.getData());    		
+			if (screeningReport == null) {
+				startScreeningReg(data.getData());
+			} else {
+				Toast toast = Toast.makeText(this, "This patient already has a completed screening form on file.", Toast.LENGTH_SHORT);
+				toast.show();
+			}    		
+    	} else if (requestCode == REQ_SCREENING_LOOKUP) {
+    		String screeningReport = lookupPatient(data.getData());    		
+			if (screeningReport == null) {
+				Toast toast = Toast.makeText(this, "There is no screening form on file for this patient ID.", Toast.LENGTH_SHORT);
+				toast.show();
+			} else {
+				launchViewReport(screeningReport);
+			}
+    	} else if (requestCode == REQ_SCREENING_PAT_REG) {
     		startScreeningPatient(data.getData());
-    	} else if (requestCode == REQ_SCREENING_ENTRY) {
+
+    	
+    	
+    	} else if (requestCode == REQ_SCREENING_MAIN) {
     		Uri instanceUri = data.getData();
 	   	    startActivityForResult(new Intent(Intent.ACTION_SYNC, instanceUri), REQ_SCREENING_SUBMIT);
     	} else if (requestCode == REQ_SCREENING_SUBMIT) {
     		if (resultCode == RESULT_OK) {
     			String resp = data.getExtras().getString("response");
-    			
+
     			Intent i = new Intent(this, ResultsActivity.class);
     			i.putExtra("url", resp);
     			startActivity(i);

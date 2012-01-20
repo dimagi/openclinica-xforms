@@ -14,7 +14,7 @@ from urlparse import urlparse, parse_qs
 import email
 from xforminst_to_odm import process_instance
 import util
-from datetime import datetime
+from datetime import datetime, date
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger('proxy')
@@ -67,7 +67,7 @@ class BaseHandler(web.RequestHandler):
             self.write(result)
             self.finish()
 
-class NeedsScreeningHandler(BaseHandler):
+class RetrieveScreeningHandler(BaseHandler):
     def handle(self):
         subj_id = self.get_argument('subject_id')
         study_id = self.get_argument('study_id')
@@ -80,7 +80,13 @@ class NeedsScreeningHandler(BaseHandler):
         # also TODO: cache patient demographic info in memcached
 
         result = self.conn.lookup_subject(subj_id, study_id)
-        return (result is None)
+        if result is not None:
+            # study event and ordinal are hard-coded for now
+            url = report_url(self.conn.base_url, study_id=study_id, subject_id=subj_id, studyevent_id='SE_CPCS', event_ix=1)
+        else:
+            url = None
+
+        return {'url': url}
 
 class SubmitHandler(BaseHandler):
     def head(self):
@@ -108,7 +114,7 @@ class SubmitHandler(BaseHandler):
             logger.debug('converted to odm:\n%s' % util.dump_xml(resp['odm'], pretty=True))
 
             # for now, assume that patient must be created
-            self.conn.create_subject(resp['subject_id'], resp['birthdate'], resp['gender'], resp['study_id'])
+            self.conn.create_subject(resp['subject_id'], date.today(), resp['gender'], resp['name'], resp['study_id'])
             event_ix = self.conn.sched_event(resp['subject_id'], resp['studyevent_id'],
                                             resp['location'], resp['start'], resp['end'], resp['study_id'])
             self.conn.submit(resp['odm'])
@@ -211,7 +217,7 @@ if __name__ == "__main__":
 
     application = web.Application([
         (r'/', DashboardHandler, {'conn': conn, 'boot': datetime.utcnow()}),
-        (r'/needs-screening', NeedsScreeningHandler, {'conn': conn}),
+        (r'/screening-report', RetrieveScreeningHandler, {'conn': conn}),
         (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn, 'xform_path': options.xform}),
     ])
     application.listen(options.port)
