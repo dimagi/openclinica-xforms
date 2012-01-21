@@ -254,36 +254,15 @@ def _find_item(form, id):
 def inject_structure(form, rules, options):
     crf_group = QuestionGroup('crf', None, form.items)
 
-    # patient id entry
-    reg_group = QuestionGroup('subject', 'Patient Info', [])
-    pat_id_mode = options.get('pat_id', 'barcode')
-    if pat_id_mode == 'barcode':
-        pat_id = Question('pat_id', 'PATIENT_ID', 'barcode', 'Patient ID', None)
-        pat_id.required = True
-        reg_group.items.append(pat_id)
-    elif pat_id_mode == 'dbl-entry':
-        PATID_DATATYPE = 'integer'
-        pat_id_verif = Question('_pat_id', None, PATID_DATATYPE, 'Enter Patient ID', None)
-        pat_id = Question('pat_id', None, PATID_DATATYPE, 'Verify Patient ID', None)
-        pat_id_verif.required = True
-        pat_id.required = True
-        dbl_entry_rule = XRule('constraint', pat_id, '. = %s', pat_id_verif)
-        rules.append(dbl_entry_rule)
-        dbl_entry_rule.constraint_msg = 'The patient IDs entered do not match!'
-        reg_group.items.extend([pat_id_verif, pat_id])
-    else:
-        raise Exception('patient id entry mode [%s] not known' % pat_id_mode)
-
-    # hook to check if screening needs to be filled out
-    screening_complete = Question('screening_complete', None, None, None, None)
-    info_complete = Question('info_screen_complete', None, 'info', 'A completed screening form is already on file for this patient.', None)
-    tmp_group = QuestionGroup('tmp', None, [screening_complete, info_complete])
-
+    pat_id = Question('pat_id', None, 'str', None, None)
+    pat_inits = Question('initials', None, 'str', None, None)
+    reg_group = QuestionGroup('subject', None, [pat_id, pat_inits])
     rules.extend([
-        XRule('calculated', screening_complete, 'not(needs-screening(%s))', pat_id), # include the double-entry check in here too? to workaround ODK commiting answers when it's not supposed to
-        XRule('relevancy', crf_group, 'not(%s)', screening_complete),
-        XRule('relevancy', info_complete, '%s', screening_complete),
+        XRule('calculated', pat_id, "context('pat-id')"),
+        XRule('calculated', pat_inits, "context('initials')"),
     ])
+
+    tmp_group = QuestionGroup('tmp', None, [])
 
     # convert height question to feet/inches
     height_ids = options.get('height', 'I_CPCS_HEIGHT')
