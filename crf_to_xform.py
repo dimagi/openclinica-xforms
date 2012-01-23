@@ -554,9 +554,13 @@ def build_itext_entry(parent_node, ref, text):
     vaud.attrib['form'] = 'audio'
     vaud.text = 'jrtts://'
 
+def _addnode(parent, node):
+    if node:
+        parent.append(node)
+
 def build_body(node, form):
     for child in form.items:
-        node.append(build_body_item(child))
+        _addnode(node, build_body_item(child))
 
 def build_body_item(item):
     if hasattr(item, 'items'):
@@ -568,9 +572,10 @@ def build_body_item(item):
         if item.grouped:
             node.attrib['appearance'] = 'field-list' #'full'
         for child in item.items:
-            childnode = build_body_item(child)
-            if childnode:
-                node.append(childnode)
+            _addnode(node, build_body_item(child))
+
+        if len(node) == 0:
+            node = None  # empty group; don't generate
     else:
         node = build_question(item)
     return node
