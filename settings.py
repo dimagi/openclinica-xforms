@@ -1,0 +1,3 @@
+
+
+CLINIC_NAME = 'BURGDORF'

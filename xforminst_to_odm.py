@@ -6,6 +6,7 @@ from optparse import OptionParser
 from StringIO import StringIO
 import util
 from datetime import date, datetime, timedelta
+import settings
 
 def parse_metadata(root):
     xmlns, tag = util.split_tag(root.tag)
@@ -20,54 +21,69 @@ def parse_metadata(root):
 
 def build_submission(root, ref_instance, reconcile=False):
     metadata = parse_metadata(root)
+    resp, unwrap_instance = extract_data(root, metadata['xmlns'])
 
-    def _i(tag):
-        return '{%s}%s' % (metadata['xmlns'], tag)
+    odm, odm_data_root = odm_scaffold(metadata, resp)
+    crf_root = unwrap_instance(ref_instance, reconcile)
+    convert_instance(crf_root, odm_data_root, metadata['form'])
 
-    subject = extract_subject(root, _i)
+    resp.update({
+        'odm': odm,
+        'study_id': util.strip_oid(metadata['study'], 'study'),
+        'studyevent_id': metadata['studyevent'],
+        'form_id': metadata['form'],
 
-    def real_inst(root):
-        return root.find(_i('crf'))
-    crf_root = real_inst(root)
-    trim_instance(crf_root)
-    if reconcile:
-        if ref_instance is None:
-            raise Exception('source xform must be supplied during ODM conversion if using reconciliation mode')
-        crf_root = reconcile_instance(crf_root, real_inst(ref_instance))
+        'location': settings.CLINIC_NAME,
+    })
+    return resp
 
+def odm_scaffold(metadata, resp):
     odm = et.Element(_('ODM'))
     clindata = et.SubElement(odm, _('ClinicalData'))
     clindata.attrib['StudyOID'] = metadata['study']
     clindata.attrib['MetaDataVersionOID'] = metadata['mdv']
 
     subjdata = et.SubElement(clindata, _('SubjectData'))
-    subjdata.attrib['SubjectKey'] = subject
+    subjdata.attrib['SubjectKey'] = util.make_oid(resp['subject_id'], 'subj')
 
     seevtdata = et.SubElement(subjdata, _('StudyEventData'))
     seevtdata.attrib['StudyEventOID'] = metadata['studyevent']
 
-    convert_instance(crf_root, seevtdata, metadata['form'])
+    return odm, seevtdata
 
-    return {
-        'odm': odm,
-        'study_id': util.strip_oid(metadata['study'], 'study'),
-        'studyevent_id': metadata['studyevent'],
-        'subject_id': util.strip_oid(subject, 'subj'),
-        'form_id': metadata['form'],
+def extract_data(instroot, xmlns):
+    def _i(tag):
+        return '{%s}%s' % (xmlns, tag)
 
-        'location': 'BURGDORF', #TODO make config var
+    data = {
+        'subject_id': extract_subject(instroot, _i),
+        'gender': extract_field(instroot, 'I_CPCS_GENDER', _i, {'10': 'm', '20': 'f'}),
+        'name': extract_field(instroot, 'initials', _i),
         'start': datetime.now(), #TODO link to TimeStart
         'end': datetime.now(), #TODO link to TimeEnd
         #'birthdate': date(1983, 10, 6), #birthdate is not used for this project
-        'gender': 'f', #TODO link to xf question
-        'name': 'degracious', #TODO link to patient initials
     }
+
+    def unwrap_inst(ref_instance, reconcile):
+        def real_inst(root):
+            return root.find(_i('crf'))
+        crf_root = real_inst(instroot)
+        trim_instance(crf_root)
+        if reconcile:
+            if ref_instance is None:
+                raise Exception('source xform must be supplied during ODM conversion if using reconciliation mode')
+            crf_root = reconcile_instance(crf_root, real_inst(ref_instance))
+        return crf_root
+
+    return data, unwrap_inst
 
 def extract_subject(root, _):
     patient_info = root.find(_('subject'))
-    pat_id = patient_info.find(_('pat_id')).text
+    return patient_info.find(_('pat_id')).text
 
-    return util.make_oid(pat_id, 'subj')
+def extract_field(root, nodename, _, mapping=None):
+    val = root.find('.//%s' % _(nodename)).text
+    return mapping[val] if mapping and val is not None else val
 
 def trim_instance(inst_node):
     """remove temporary nodes from instance (starting with '__')"""
@@ -121,18 +137,8 @@ def convert_odm(f, source):
     return build_submission(doc.getroot(), ref_instance)
 
 def process_instance(xfinst, xform_path):
-    resp = {}
-
     inst = util.strip_namespaces(et.fromstring(xfinst))
-    contains_screening = not(int(inst.find('.//tmp/screening_complete').text))
-
-    if contains_screening:
-        resp.update(convert_odm(util.xmlfile(xfinst), load_source(xform_path=xform_path)))
-    else:
-        resp['subject_id'] = util.make_oid(inst.find('.//subject/pat_id').text, 'subj')
-        resp['odm'] = None
-
-    return resp
+    return convert_odm(util.xmlfile(xfinst), load_source(xform_path=xform_path))
 
 def load_source(xform_path=None, crf_path=None):
     if not xform_path and not crf_path:
