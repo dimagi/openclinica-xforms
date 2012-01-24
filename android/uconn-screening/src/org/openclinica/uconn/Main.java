@@ -41,18 +41,18 @@ public class Main extends Activity {
 	public static final String SCREENING_FORM_ID = "http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/";
 
     public void startScreening(View v) {
-    	launchFormEntry(PATID_FORM_ID, REQ_SCREENING_ID_ENTRY, null);
+    	launchFormEntry(PATID_FORM_ID, REQ_SCREENING_ID_ENTRY, null, null);
     }
     
     public void loadScreening(View v) {
-    	launchFormEntry(PATID_FORM_ID, REQ_SCREENING_LOOKUP, null);
+    	launchFormEntry(PATID_FORM_ID, REQ_SCREENING_LOOKUP, null, null);
     }
 
     public void startScreeningReg(Uri instanceUri) {
     	InstanceData inst = getFormInstance(instanceUri);
     	Bundle context = new Bundle();
     	context.putString("pat-id", inst.get("/pat_id/pat_id"));
-    	launchFormEntry(REG_FORM_ID, REQ_SCREENING_PAT_REG, context);
+    	launchFormEntry(REG_FORM_ID, REQ_SCREENING_PAT_REG, context, null);
     }
     
     public void startScreeningPatient(Uri instanceUri) {
@@ -65,12 +65,19 @@ public class Main extends Activity {
     	Bundle context = new Bundle();
     	context.putString("pat-id", patientID);
     	context.putString("initials", initials);
-    	launchFormEntry(SCREENING_FORM_ID, REQ_SCREENING_MAIN, context);
+    	Bundle config = new Bundle();
+    	config.putString("lang", lang);
+    	//config.putBoolean("lowlit", lowliteracy);
+    	launchFormEntry(SCREENING_FORM_ID, REQ_SCREENING_MAIN, context, config);
     }
     
     public String lookupPatient(Uri uri) {
     	InstanceData inst = getFormInstance(uri);
     	String patientID = inst.get("/pat_id/pat_id");
+
+		Toast toast = Toast.makeText(this, "Please wait while we look up this patient.", Toast.LENGTH_SHORT);
+		toast.show();
+    	
     	return PatientLookup.screeningReportURL(patientID);
     }
     
@@ -93,8 +100,11 @@ public class Main extends Activity {
    	    return ContentUris.withAppendedId(FORMS_BASE_URI, formID);
     }
     
-    protected void launchFormEntry(String xmlns, int requestCode, Bundle context) {
+    protected void launchFormEntry(String xmlns, int requestCode, Bundle context, Bundle config) {
     	Intent i = new Intent(Intent.ACTION_EDIT, formByNamespace(xmlns));
+    	if (config != null) {
+    		i.putExtras(config);
+    	}
     	i.putExtra("contextvars", context);
     	startActivityForResult(i, requestCode);
     }
@@ -146,7 +156,7 @@ public class Main extends Activity {
     	
     	if (requestCode == REQ_SCREENING_ID_ENTRY) {
     		String screeningReport = lookupPatient(data.getData());    		
-			if (screeningReport == null) {
+    		if (screeningReport == null) {
 				startScreeningReg(data.getData());
 			} else {
 				Toast toast = Toast.makeText(this, "This patient already has a completed screening form on file.", Toast.LENGTH_SHORT);
