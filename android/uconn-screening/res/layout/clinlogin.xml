@@ -18,8 +18,9 @@
 <EditText android:id="@+id/pin"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:inputType="textPassword"
-    android:digits="0123456789"
+    android:numeric="integer"
+    android:password="true"
+    android:maxLength="6"
     />
 <Button	android:id="@+id/login"
    	android:layout_height="wrap_content"
