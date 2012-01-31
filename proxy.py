@@ -156,6 +156,9 @@ class DashboardHandler(web.RequestHandler):
 <style>body{font-family: sans-serif;}</style>
 <h1>ODK-UCONN&mdash;OpenClinica Proxy</h1>
 <p>It's up! (since {{ boot.strftime('%Y-%m-%d %H:%M:%S UTC') }})</p>
+{% if dev_mode %}
+<p>Running in <b>development mode</b> using <b>{{ {'http': 'unencrypted http', 'https': 'secure http', 'https-debug': 'debug https (not secure)'}[encryption] }}</b></p>
+{% end %}
 WSDLs loaded:
 <ul>
 {% for wsdl in wsdls %}
@@ -173,6 +176,8 @@ WSDLs loaded:
         self.write(t.generate(**{
             'wsdls': wsdls,
             'boot': self.boot,
+            'dev_mode': self.dev_mode,
+            'encryption': ('https-debug' if ssl_opts['certfile'] == DEFAULT_SSL_CERT else 'https') if ssl_opts else 'http',
         }))
         
         
@@ -215,6 +220,7 @@ def validate_ssl(certfile, dev_mode):
 
     if os.path.samefile(certfile, DEFAULT_SSL_CERT):
         if dev_mode:
+            certfile = DEFAULT_SSL_CERT # make paths match exactly
             logging.warn('using the debug ssl certificate, which is NOT SECURE')
         else:
             raise Exception('the debug certificate can only be used in development mode (--dev); it is not secure')
@@ -245,7 +251,12 @@ if __name__ == "__main__":
     conn = WSDL(url, options.user, options.password)
 
     application = web.Application([
-        (r'/', DashboardHandler, {'conn': conn, 'boot': datetime.utcnow()}),
+        (r'/', DashboardHandler, {
+            'conn': conn,
+            'boot': datetime.utcnow(),
+            'dev_mode': options.dev_mode,
+            'encryption': ssl_opts,
+        }),
         (r'/screening-report', RetrieveScreeningHandler, {'conn': conn}),
         (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn, 'xform_path': options.xform}),
     ])
