@@ -15,12 +15,14 @@ import email
 from xforminst_to_odm import process_instance
 import util
 from datetime import datetime, date
+import os.path
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger('proxy')
 logger.setLevel(logging.DEBUG)
 
 DEFAULT_PORT = 8053
+DEFAULT_SSL_CERT = os.path.join(os.path.dirname(__file__), 'ssl/debug.crt')
 ODK_SUBMIT_PATH = 'submission'
 
 def _async(callback, func):
@@ -199,6 +201,28 @@ class WSDL(object):
     def submit(self, *args, **kwargs):
         return self._func(ws.submit, 'data')(*args, **kwargs)
 
+def validate_ssl(certfile, dev_mode):
+    if certfile == '-':
+        # http only
+        if dev_mode:
+            logging.warn('using UNENCRYPTED HTTP')
+            return None
+        else:
+            raise Exception('unencrypted http can only be used in development mode (--dev)')
+
+    if not os.path.isfile(certfile):
+        raise Exception('%s is not a file' % os.path.abspath(certfile))
+
+    if os.path.samefile(certfile, DEFAULT_SSL_CERT):
+        if dev_mode:
+            logging.warn('using the debug ssl certificate, which is NOT SECURE')
+        else:
+            raise Exception('the debug certificate can only be used in development mode (--dev); it is not secure')
+
+    return {
+        'certfile': certfile,
+    }
+
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-u", "--user", dest="user",
@@ -209,9 +233,14 @@ if __name__ == "__main__":
                       help="source xform")
     parser.add_option("--port", dest="port", default=DEFAULT_PORT, type='int',
                       help="http listen port")
+    parser.add_option("--dev", dest="dev_mode", action="store_true",
+                      help="enable dev mode")
+    parser.add_option("--sslcert", dest="sslcert", default=DEFAULT_SSL_CERT,
+                      help="path of ssl certificate for https; '-' to use only http")
 
     (options, args) = parser.parse_args()
     url = args[0]
+    ssl_opts = validate_ssl(options.sslcert, options.dev_mode)
 
     conn = WSDL(url, options.user, options.password)
 
@@ -220,7 +249,7 @@ if __name__ == "__main__":
         (r'/screening-report', RetrieveScreeningHandler, {'conn': conn}),
         (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn, 'xform_path': options.xform}),
     ])
-    application.listen(options.port)
+    application.listen(options.port, ssl_options=ssl_opts)
     logging.info('proxy initialized and ready to take requests')
 
     IOLoop.instance().start()

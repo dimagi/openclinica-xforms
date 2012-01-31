@@ -23,7 +23,6 @@ public class ClinicianLoginActivity extends Activity {
     public void logIn(View v) {
     	EditText pinField = (EditText)findViewById(R.id.pin);
     	String pin = pinField.getText().toString();
-    	Log.i("got pin", pin);
     	
     	if (!validatePIN(pin)) {
     		Toast toast = Toast.makeText(this, "Not a valid PIN", Toast.LENGTH_SHORT);
@@ -34,6 +33,7 @@ public class ClinicianLoginActivity extends Activity {
     	Intent i = new Intent(this, ResultsActivity.class);
     	i.putExtra("url", reportUrl);
     	startActivity(i);
+    	finish();
     }
     
     private boolean validatePIN(String pin) {
