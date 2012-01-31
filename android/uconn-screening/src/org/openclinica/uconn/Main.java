@@ -18,7 +18,6 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.BaseColumns;
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -28,6 +27,11 @@ public class Main extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+
+    	//DEBUG
+//    	Intent i = new Intent(this, ClinicianLoginActivity.class);
+//		i.putExtra("url", "http://reddit.com");
+//		startActivity(i);
     }
 
     public static final int REQ_SCREENING_ID_ENTRY = 1;
@@ -182,7 +186,7 @@ public class Main extends Activity {
     		if (resultCode == RESULT_OK) {
     			String resp = data.getExtras().getString("response");
 
-    			Intent i = new Intent(this, ResultsActivity.class);
+    			Intent i = new Intent(this, ClinicianLoginActivity.class);
     			i.putExtra("url", resp);
     			startActivity(i);
     		}
