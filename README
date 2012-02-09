@@ -34,6 +34,11 @@ to run proxy:
 -f  xform file corresponding to the instances tablet is submitting
     (note: not needed for the current submission mode)
 --port  listen port (default 8053)
+--sslcert  path to SSL certificate to use. by default will use a self-signed
+    debugging certificate (insecure). '-' will disable https, and the proxy
+    will only communicate over http
+--dev   enable development mode. this allows insecure configurations such as
+    disabling https or using the https debug cert
 url  root url of openclinica install
      (https://64.119.157.114:8070/OpenClinica-ws/ for staging server)
 
