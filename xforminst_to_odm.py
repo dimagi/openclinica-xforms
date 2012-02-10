@@ -123,6 +123,15 @@ def convert_instance(in_node, out_node, form_name=None):
         for child in in_node:
             convert_instance(child, group)
     else:
+        value = (in_node.text or '')
+        
+        ALLOW_FORCE_COMPLETION = True  # if we allow form to be submitted in incomplete state -- required questions might be blank
+        is_required = True # TODO figure out how to pull this from the crf definition; i think currently everything is required so doesn't matter
+
+        if ALLOW_FORCE_COMPLETION and is_required and value == '':
+            # strip this answer from the submission or OC will complain about data integrity
+            return
+
         q = et.SubElement(out_node, _('ItemData'))
         q.attrib['ItemOID'] = name
         q.attrib['Value'] = (in_node.text or '')
