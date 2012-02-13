@@ -25,10 +25,16 @@ DEFAULT_PORT = 8053
 DEFAULT_SSL_CERT = os.path.join(os.path.dirname(__file__), 'ssl/debug.crt')
 ODK_SUBMIT_PATH = 'submission'
 
+class AuthenticationFailed(Exception):
+    pass
+
 def _async(callback, func):
     try:
         result = func()
         success = True
+    except AuthenticationFailed:
+        result = 'auth failed'
+        success = False
     except Exception, e:
         logger.exception('exception in handler thread')
         result = '%s %s' % (type(e), str(e))
@@ -39,6 +45,7 @@ def _async(callback, func):
 def async(request, func):
     threading.Thread(target=_async, args=[request._respond, func]).start()
 
+@util.basic_auth
 class BaseHandler(web.RequestHandler):
     def initialize(self, conn, **kwargs):
         self.conn = conn
@@ -46,12 +53,12 @@ class BaseHandler(web.RequestHandler):
             setattr(self, k, v)
 
     @web.asynchronous
-    def get(self):
-        async(self, lambda: self.handle())
+    def get(self, auth_user, auth_pass):
+        async(self, lambda: self.handle((auth_user, auth_pass)))
 
     @web.asynchronous
-    def post(self):
-        async(self, lambda: self.handle())
+    def post(self, auth_user, auth_pass):
+        async(self, lambda: self.handle((auth_user, auth_pass)))
 
     def _success(self, result):
         self.set_header('Content-Type', 'text/json')
@@ -62,15 +69,17 @@ class BaseHandler(web.RequestHandler):
             self._success(result)
             self.finish()
         else:
-            # this doesn't seem to work
-            # raise HTTPError(500, result)
-
-            self.set_status(500)
+            if result == 'auth failed':
+                self.set_status(401)
+            else:
+                # this doesn't seem to work
+                # raise HTTPError(500, result)
+                self.set_status(500)
             self.write(result)
             self.finish()
 
 class RetrieveScreeningHandler(BaseHandler):
-    def handle(self):
+    def handle(self, auth):
         subj_id = self.get_argument('subject_id')
         study_id = self.get_argument('study_id')
 
@@ -81,7 +90,7 @@ class RetrieveScreeningHandler(BaseHandler):
 
         # also TODO: cache patient demographic info in memcached
 
-        result = self.conn.lookup_subject(subj_id, study_id)
+        result = self.conn.lookup_subject(auth, subj_id, study_id)
         if result is not None:
             # study event and ordinal are hard-coded for now
             url = report_url(self.conn.base_url, study_id=study_id, subject_id=subj_id, studyevent_id='SE_CPCS', event_ix=1)
@@ -99,7 +108,7 @@ class SubmitHandler(BaseHandler):
         self.set_header('Location', '%s://%s/%s' % (scheme, host, ODK_SUBMIT_PATH))
         self.finish()        
 
-    def handle(self):
+    def handle(self, auth):
         content_type = self.request.headers.get('Content-Type')
         payload = self.request.body
 
@@ -183,9 +192,9 @@ WSDLs loaded:
         
 
 class WSDL(object):
-    def __init__(self, url, user, password):
+    def __init__(self, url):
         def conn(wsdl):
-            return ws.connect(url, wsdl, user, password)
+            return ws.connect(url, wsdl)
 
         self.base_url = url
         self.wsdl = {
@@ -194,17 +203,29 @@ class WSDL(object):
             'data': conn(ws.DATA_WSDL),
         }
 
-    def _func(self, f, wsdl):
-        return lambda *args, **kwargs: f(self.wsdl[wsdl], *args, **kwargs)
+    def _func(self, f, wsdl, auth):
+        conn = self.wsdl[wsdl]
+        ws.authenticate(conn, auth)
 
-    def lookup_subject(self, *args, **kwargs):
-        return self._func(ws.lookup_subject, 'subj')(*args, **kwargs)
-    def create_subject(self, *args, **kwargs):
-        return self._func(ws.create_subject, 'subj')(*args, **kwargs)
-    def sched_event(self, *args, **kwargs):
-        return self._func(ws.sched, 'se')(*args, **kwargs)
-    def submit(self, *args, **kwargs):
-        return self._func(ws.submit, 'data')(*args, **kwargs)
+        def _exec(*args, **kwargs):
+            try:
+                return f(self.wsdl[wsdl], *args, **kwargs)
+            except Exception, e:
+                msg = str(e).lower()
+                if 'authentication' in msg and 'failed' in msg: #ghetto
+                    raise AuthenticationFailed()
+                else:
+                    raise
+        return _exec
+
+    def lookup_subject(self, auth, *args, **kwargs):
+        return self._func(ws.lookup_subject, 'subj', auth)(*args, **kwargs)
+    def create_subject(self, auth, *args, **kwargs):
+        return self._func(ws.create_subject, 'subj', auth)(*args, **kwargs)
+    def sched_event(self, auth, *args, **kwargs):
+        return self._func(ws.sched, 'se', auth)(*args, **kwargs)
+    def submit(self, auth, *args, **kwargs):
+        return self._func(ws.submit, 'data', auth)(*args, **kwargs)
 
 def validate_ssl(certfile, dev_mode):
     if certfile == '-':
@@ -231,10 +252,6 @@ def validate_ssl(certfile, dev_mode):
 
 if __name__ == "__main__":
     parser = OptionParser()
-    parser.add_option("-u", "--user", dest="user",
-                      help="SOAP auth username")
-    parser.add_option("-p", "--password", dest="password",
-                      help="SOAP auth passwordt")
     parser.add_option("-f", "--xform", dest="xform",
                       help="source xform")
     parser.add_option("--port", dest="port", default=DEFAULT_PORT, type='int',
@@ -248,7 +265,7 @@ if __name__ == "__main__":
     url = args[0]
     ssl_opts = validate_ssl(options.sslcert, options.dev_mode)
 
-    conn = WSDL(url, options.user, options.password)
+    conn = WSDL(url)
 
     application = web.Application([
         (r'/', DashboardHandler, {

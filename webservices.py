@@ -13,7 +13,7 @@ SUBJ_WSDL = 'ws/studySubject/v1/studySubjectWsdl.wsdl'
 SE_WSDL = 'ws/event/v1/eventWsdl.wsdl'
 DATA_WSDL = 'ws/data/v1/dataWsdl.wsdl'
 
-def connect(base_url, wsdl, user, passwd):
+def connect(base_url, wsdl):
     wsdl_url = util.urlconcat(base_url, wsdl)
 
     client = Client(wsdl_url)
@@ -23,13 +23,13 @@ def connect(base_url, wsdl, user, passwd):
     endpoint = client.wsdl.services[0].ports[0].location[1:] # trim leading slash
     client.set_options(location=util.urlconcat(base_url, endpoint))
 
-    if user and passwd:
-        security = Security()
-        token = UsernameToken(user, hashlib.sha1(passwd).hexdigest())
-        security.tokens.append(token)
-        client.set_options(wsse=security)
-
     return client
+
+def authenticate(client, (user, passwd)):
+    security = Security()
+    token = UsernameToken(user, hashlib.sha1(passwd).hexdigest())
+    security.tokens.append(token)
+    client.set_options(wsse=security)
 
 def lookup_subject(conn, subj_id, study_id):
     subj = conn.factory.create('ns0:studySubjectType')
