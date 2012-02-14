@@ -45,17 +45,18 @@ def _async(callback, func):
 def async(request, func):
     threading.Thread(target=_async, args=[request._respond, func]).start()
 
-@util.basic_auth
 class BaseHandler(web.RequestHandler):
     def initialize(self, conn, **kwargs):
         self.conn = conn
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
+    @util.basic_auth
     @web.asynchronous
     def get(self, auth_user, auth_pass):
         async(self, lambda: self.handle((auth_user, auth_pass)))
 
+    @util.basic_auth
     @web.asynchronous
     def post(self, auth_user, auth_pass):
         async(self, lambda: self.handle((auth_user, auth_pass)))
@@ -106,7 +107,7 @@ class SubmitHandler(BaseHandler):
 
         self.set_status(204)
         self.set_header('Location', '%s://%s/%s' % (scheme, host, ODK_SUBMIT_PATH))
-        self.finish()        
+        self.finish()
 
     def handle(self, auth):
         content_type = self.request.headers.get('Content-Type')
@@ -125,10 +126,10 @@ class SubmitHandler(BaseHandler):
             logger.debug('converted to odm:\n%s' % util.dump_xml(resp['odm'], pretty=True))
 
             # for now, assume that patient must be created
-            self.conn.create_subject(resp['subject_id'], date.today(), resp['gender'], resp['name'], resp['study_id'])
-            event_ix = self.conn.sched_event(resp['subject_id'], resp['studyevent_id'],
+            self.conn.create_subject(auth, resp['subject_id'], date.today(), resp['gender'], resp['name'], resp['study_id'])
+            event_ix = self.conn.sched_event(auth, resp['subject_id'], resp['studyevent_id'],
                                             resp['location'], resp['start'], resp['end'], resp['study_id'])
-            self.conn.submit(resp['odm'])
+            self.conn.submit(auth, resp['odm'])
 
             resp.update({'event_ix': event_ix})
             return report_url(self.conn.base_url, **resp)

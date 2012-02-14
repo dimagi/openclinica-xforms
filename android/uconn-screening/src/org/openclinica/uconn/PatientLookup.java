@@ -2,14 +2,27 @@ package org.openclinica.uconn;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.params.AuthPolicy;
+import org.apache.http.client.params.HttpClientParams;
+import org.apache.http.client.protocol.ClientContext;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpParams;
+import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.HttpContext;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -34,16 +47,13 @@ public class PatientLookup {
 //		return result.booleanValue();
 	}
 
+	
+	
 	protected static String screeningLookupWebService(String patientID) throws IOException {
-		if (DEBUG) {
-			return needsScreeningWebServiceStub(patientID);
-		}
-		
 		final String STUDY_ID = "CPCS";
 		String wsUrl = serverURL() + "/screening-report?subject_id=" + patientID + "&study_id=" + STUDY_ID;
 		
-		HttpClient httpclient = new DefaultHttpClient();
-	    HttpResponse response = httpclient.execute(new HttpGet(wsUrl));
+        HttpResponse response = httpQuery(wsUrl);
 	    StatusLine statusLine = response.getStatusLine();
 	    if(statusLine.getStatusCode() == HttpStatus.SC_OK){
 	        ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -66,15 +76,34 @@ public class PatientLookup {
 	    }
 	}
 	
-	private static String needsScreeningWebServiceStub(String patientID) {
-		return (patientID.charAt(patientID.length() - 1) % 2 == 0 ? "http://google.com" : "");
-	}
+	private static HttpResponse httpQuery(String url) throws IOException {
+        HttpParams params = new BasicHttpParams();
+        HttpClientParams.setAuthenticating(params, true);
+        HttpClient httpclient = new DefaultHttpClient(params);
 
+		HttpContext httpcontext = new BasicHttpContext();
+		CredentialsProvider credsProvider = new BasicCredentialsProvider();
+        httpcontext.setAttribute(ClientContext.CREDS_PROVIDER, credsProvider);
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username(), password()));
+
+        return httpclient.execute(new HttpGet(url), httpcontext);
+	}
+	
 	private static String serverURL() {
 //		SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(Collect.getInstance().getApplicationContext());
 //		return sp.getString(PreferencesActivity.KEY_SERVER_URL, null);
 		
-		return "http://mrgris.com:8053"; //TODO make this a setting
+		//TODO make this a setting
+		return "http://mrgris.com:8053";
+		//return "https://mrgris.com:8053";
 	}
-
+	
+	private static String username() {
+		return "droos";
+	}
+	
+	private static String password() {
+		return "password";
+	}
+	
 }
