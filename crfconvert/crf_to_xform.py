@@ -1,11 +1,15 @@
+import sys
+import os.path
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
 from xml.etree import ElementTree as et
 from StringIO import StringIO
-import sys
 import itertools
 import collections
 import expr_parse
 import hashlib
-import os.path
 from subprocess import Popen, PIPE
 import csv
 from optparse import OptionParser

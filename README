@@ -6,6 +6,7 @@ sudo pip install -r pip-requires.txt
 
 to convert a CRF xml export to xform:
 
+> cd crfconvert
 > python crf_to_xform.py [-d] [-t translations.csv] crf.xml
 
 crf.xml will be converted to xform and printed to stdout
@@ -28,17 +29,16 @@ audio prompts, but that is not supported yet.
 
 to run proxy:
 
-> python proxy.py -u username -p password [-f xform] [--port port] openclinica_url
+> cd proxy
+> python proxy.py [-f xform] [--port port] [--sslcert ssl_cert_path] openclinica_url
 
--u, -p  credentials to authenticate with web service
 -f  xform file corresponding to the instances tablet is submitting
-    (note: not needed for the current submission mode)
+    (note: not currently needed)
 --port  listen port (default 8053)
 --sslcert  path to SSL certificate to use. by default will use a self-signed
     debugging certificate (insecure). '-' will disable https, and the proxy
     will only communicate over http
---dev   enable development mode. this allows insecure configurations such as
-    disabling https or using the https debug cert
+--dev   enable development mode. insecure configurations require this setting
 url  root url of openclinica install
      (https://64.119.157.114:8070/OpenClinica-ws/ for staging server)
 

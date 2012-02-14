@@ -1,4 +1,9 @@
 import sys
+import os.path
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
 from tornado.ioloop import IOLoop
 import tornado.web as web
 from tornado.httpclient import HTTPError
@@ -15,7 +20,6 @@ import email
 from xforminst_to_odm import process_instance
 import util
 from datetime import datetime, date
-import os.path
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger('proxy')

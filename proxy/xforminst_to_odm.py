@@ -1,4 +1,4 @@
-from crf_to_xform import _, convert_xform
+from crfconvert.crf_to_xform import _, convert_xform
 from xml.etree import ElementTree as et
 import sys
 import re
