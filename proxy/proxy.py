@@ -28,9 +28,6 @@ logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger('proxy')
 logger.setLevel(logging.DEBUG)
 
-DEFAULT_PORT = 8053
-DEFAULT_SSL_CERT = os.path.join(os.path.dirname(__file__), 'ssl/debug.crt')
-DEFAULT_USERS_DB = os.path.join(os.path.dirname(__file__), 'demo_users.csv')
 ODK_SUBMIT_PATH = 'submission'
 
 class AuthenticationFailed(Exception):
@@ -260,7 +257,7 @@ class WSDL(object):
         return self._func(ws.submit, 'data', auth)(*args, **kwargs)
 
 def validate_ssl(certfile, dev_mode):
-    if certfile == '-':
+    if certfile == '-' or certfile is None:
         # http only
         if dev_mode:
             logging.warn('using UNENCRYPTED HTTP')
@@ -271,9 +268,9 @@ def validate_ssl(certfile, dev_mode):
     if not os.path.isfile(certfile):
         raise Exception('%s is not a file' % os.path.abspath(certfile))
 
-    if os.path.samefile(certfile, DEFAULT_SSL_CERT):
+    if os.path.samefile(certfile, settings.DEFAULT_SSL_CERT):
         if dev_mode:
-            certfile = DEFAULT_SSL_CERT # make paths match exactly
+            certfile = settings.DEFAULT_SSL_CERT # make paths match exactly
             logging.warn('using the debug ssl certificate, which is NOT SECURE')
         else:
             raise Exception('the debug certificate can only be used in development mode (--dev); it is not secure')
@@ -289,12 +286,11 @@ def load_users_csv(path):
             yield row
 
 def load_users(usercsvpath, dev_mode):
-    if usercsvpath is None:
-        if dev_mode:
-            logging.warn('using demo users database')
-            usercsvpath = DEFAULT_USERS_DB
-        else:
-            raise Exception('users database (--userdb) must be specified in production mode')
+    if not os.path.isfile(usercsvpath):
+        raise Exception('%s is not a file' % os.path.abspath(usercsvpath))
+
+    if os.path.samefile(usercsvpath, settings.DEFAULT_USERS_DB):
+        logging.warn('using demo users database')
 
     def emitfunc(user):
         pin = user['pin'].strip()
@@ -320,19 +316,22 @@ def load_users(usercsvpath, dev_mode):
 
 if __name__ == "__main__":
     parser = OptionParser()
-    parser.add_option("-f", "--xform", dest="xform",
+    parser.add_option("-f", "--xform", dest="xform", default=settings.SOURCE_XFORM,
                       help="source xform")
-    parser.add_option("--port", dest="port", default=DEFAULT_PORT, type='int',
+    parser.add_option("--port", dest="port", default=settings.DEFAULT_PORT, type='int',
                       help="http listen port")
     parser.add_option("--dev", dest="dev_mode", action="store_true",
                       help="enable dev mode")
-    parser.add_option("--sslcert", dest="sslcert", default=DEFAULT_SSL_CERT,
+    parser.add_option("--sslcert", dest="sslcert", default=settings.SSL_CERT,
                       help="path of ssl certificate for https; '-' to use only http")
-    parser.add_option("--userdb", dest="userdb",
+    parser.add_option("--userdb", dest="userdb", default=settings.USERS_DB,
                       help="a csv file of clinic users and PINs")
 
     (options, args) = parser.parse_args()
-    url = args[0]
+    try:
+        url = args[0]
+    except IndexError:
+        url = settings.OPENCLINICA_SERVER
     ssl_opts = validate_ssl(options.sslcert, options.dev_mode)
     user_db = load_users(options.userdb, options.dev_mode)
 

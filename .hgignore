@@ -7,5 +7,5 @@ parser.out
 itext_dump.csv
 .metadata/
 .settings/
-bin/
-gen/
+server.crt
+localsettings.py
