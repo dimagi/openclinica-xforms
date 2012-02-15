@@ -20,6 +20,9 @@ import email
 from xforminst_to_odm import process_instance
 import util
 from datetime import datetime, date
+import csv
+import settings
+import re
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger('proxy')
@@ -27,6 +30,7 @@ logger.setLevel(logging.DEBUG)
 
 DEFAULT_PORT = 8053
 DEFAULT_SSL_CERT = os.path.join(os.path.dirname(__file__), 'ssl/debug.crt')
+DEFAULT_USERS_DB = os.path.join(os.path.dirname(__file__), 'demo_users.csv')
 ODK_SUBMIT_PATH = 'submission'
 
 class AuthenticationFailed(Exception):
@@ -104,6 +108,22 @@ class RetrieveScreeningHandler(BaseHandler):
 
         return {'url': url}
 
+class ValidatePINHandler(BaseHandler):
+    def handle(self, auth):
+        pin = self.get_argument('pin')
+
+        # no-op web service call just to validate authentication
+        # TODO want a dedicated web service just for verifying credentials
+        self.conn.lookup_subject(auth, 'DONTCARE', 'DONTCARE')
+
+        users = util.map_reduce(self.user_db, lambda u: [(u['pin'], u)] if u['active'] else [], lambda vu: vu[0])
+        try:
+            user = users[pin]
+        except KeyError:
+            user = None
+
+        return {'user': user}
+
 class SubmitHandler(BaseHandler):
     def head(self):
         scheme = self.request.protocol #'http' # will need to support https eventually?
@@ -179,6 +199,12 @@ WSDLs loaded:
 <li>{{ wsdl }}</li>
 {% end %}
 </ul>
+Clinic Users:
+<ul>
+{% for user in sorted(user_db, key=lambda u: u['name']) %}
+<li{% if not user['active'] %} style="text-decoration: line-through;"{% end %}>{{ user['name'] }}, {{ user['role'] }}</li>
+{% end %}
+</ul>
 </body>
 </html>
 """)
@@ -192,6 +218,7 @@ WSDLs loaded:
             'boot': self.boot,
             'dev_mode': self.dev_mode,
             'encryption': ('https-debug' if ssl_opts['certfile'] == DEFAULT_SSL_CERT else 'https') if ssl_opts else 'http',
+            'user_db': self.user_db,
         }))
         
         
@@ -255,6 +282,42 @@ def validate_ssl(certfile, dev_mode):
         'certfile': certfile,
     }
 
+def load_users_csv(path):
+    with open(path) as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            yield row
+
+def load_users(usercsvpath, dev_mode):
+    if usercsvpath is None:
+        if dev_mode:
+            logging.warn('using demo users database')
+            usercsvpath = DEFAULT_USERS_DB
+        else:
+            raise Exception('users database (--userdb) must be specified in production mode')
+
+    def emitfunc(user):
+        pin = user['pin'].strip()
+        if pin:
+            user['active'] = True
+            if len(pin) < settings.MIN_PIN_LENGTH:
+                raise Exception('pin for user [%s] is shorter than the required minimum length (%d)' % (user['name'], settings.MIN_PIN_LENGTH))
+            if not re.match('[0-9]+$', pin):
+                raise Exception('pin for user [%s] is not numeric' % user['name'])
+        else:
+            # inactive user
+            user['active'] = False
+        yield (pin, user)
+    def reducefunc(users):
+        if len(users) > 1 and users[0]['active']:
+            raise Exception('users %s have the same pin. pins must be unique' % ', '.join(u['name'] for u in users))
+
+    users = list(load_users_csv(usercsvpath))
+    # don't care about return value; just for validation logic
+    util.map_reduce(users, emitfunc, reducefunc)
+
+    return users
+
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-f", "--xform", dest="xform",
@@ -265,10 +328,13 @@ if __name__ == "__main__":
                       help="enable dev mode")
     parser.add_option("--sslcert", dest="sslcert", default=DEFAULT_SSL_CERT,
                       help="path of ssl certificate for https; '-' to use only http")
+    parser.add_option("--userdb", dest="userdb",
+                      help="a csv file of clinic users and PINs")
 
     (options, args) = parser.parse_args()
     url = args[0]
     ssl_opts = validate_ssl(options.sslcert, options.dev_mode)
+    user_db = load_users(options.userdb, options.dev_mode)
 
     conn = WSDL(url)
 
@@ -278,8 +344,10 @@ if __name__ == "__main__":
             'boot': datetime.utcnow(),
             'dev_mode': options.dev_mode,
             'encryption': ssl_opts,
+            'user_db': user_db,
         }),
         (r'/screening-report', RetrieveScreeningHandler, {'conn': conn}),
+        (r'/validate-pin', ValidatePINHandler, {'conn': conn, 'user_db': user_db}),
         (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn, 'xform_path': options.xform}),
     ])
     application.listen(options.port, ssl_options=ssl_opts)
