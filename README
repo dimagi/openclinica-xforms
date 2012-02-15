@@ -30,7 +30,7 @@ audio prompts, but that is not supported yet.
 to run proxy:
 
 > cd proxy
-> python proxy.py [-f xform] [--port port] [--sslcert ssl_cert_path] openclinica_url
+> python proxy.py [-f xform] [--port port] [--userdb userdata.csv] [--sslcert sslcert.key] openclinica_url
 
 -f  xform file corresponding to the instances tablet is submitting
     (note: not currently needed)
@@ -38,6 +38,10 @@ to run proxy:
 --sslcert  path to SSL certificate to use. by default will use a self-signed
     debugging certificate (insecure). '-' will disable https, and the proxy
     will only communicate over http
+--userdb  path to a CSV file containing data on the clinic users of the system.
+    the csv file should have 3 columns: name (full name), role (physician, frontdesk,
+    etc.), and pin (a numeric PIN). leave PIN blank for inactive users. see
+    demo_users.csv as an example
 --dev   enable development mode. insecure configurations require this setting
 url  root url of openclinica install
      (https://64.119.157.114:8070/OpenClinica-ws/ for staging server)
@@ -49,4 +53,8 @@ servicing requests from the tablet
 
 to configure tablet:
 
-set server url to url of proxy (including port)
+on main screen -> menu button -> change preferences:
+
+* set server url to url of proxy (including port)
+* set username and password for the OpenClinica user account created for this
+  specific device
