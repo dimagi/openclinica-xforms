@@ -108,6 +108,7 @@ class RetrieveScreeningHandler(BaseHandler):
 class ValidatePINHandler(BaseHandler):
     def handle(self, auth):
         pin = self.get_argument('pin')
+        action = self.get_argument('action', '??')
 
         # no-op web service call just to validate authentication
         # TODO want a dedicated web service just for verifying credentials
@@ -116,8 +117,10 @@ class ValidatePINHandler(BaseHandler):
         users = util.map_reduce(self.user_db, lambda u: [(u['pin'], u)] if u['active'] else [], lambda vu: vu[0])
         try:
             user = users[pin]
+            logging.info('user %s authenticated for action %s' % (user['name'], action))
         except KeyError:
             user = None
+            logging.info('failed PIN authentication attempt [%s]' % pin)
 
         return {'user': user}
 
