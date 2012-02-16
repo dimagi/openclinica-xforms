@@ -57,6 +57,12 @@ servicing requests from the tablet
 
 to configure tablet:
 
+* generate the xform from the most recent CRF
+* copy the xform, as well as the static xforms in data/xform/ to
+  /sdcard/odk/forms/
+* generate an SSL certificate whitelist by running proxy/gen_client_keystore.py;
+  copy the resultant 'keystore' file to /sdcard/odk/keystore
+
 on main screen -> menu button -> change preferences:
 
 * set server url to url of proxy (including port)

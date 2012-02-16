@@ -9,3 +9,4 @@ itext_dump.csv
 .settings/
 server.crt
 localsettings.py
+keystore

@@ -28,6 +28,9 @@ CLINIC_NAME = 'TEST_CLINIC'
 # minimum allowed length for clinic user PINs
 MIN_PIN_LENGTH = 5
 
+# path of bouncycastle jar file
+BOUNCYCASTLE_JAR = '/usr/share/java/bcprov.jar'
+
 
 
 
