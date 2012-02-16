@@ -2,6 +2,12 @@ install dependencies:
 
 sudo pip install -r pip-requires.txt
 
+other dependencies:
+
+openssl
+keytool (packaged with java6)
+bouncycastle provider jar
+(the above 3 are only needed for ssl cert deployment -- this step can be done offline)
 
 
 to convert a CRF xml export to xform:

@@ -26,8 +26,7 @@ def add_cert(i, cert):
 if __name__ == "__main__":
 
     certs = set(crt for crt in [settings.DEFAULT_SSL_CERT, settings.SSL_CERT] if crt is not None)
-    for arg in sys.argv[1:]:
-        certs.add(arg)
+    certs |= set(sys.argv[1:])
 
     if os.path.exists(KEYSTORE):
         os.remove(KEYSTORE)
