@@ -217,7 +217,7 @@ Clinic Users:
             'wsdls': wsdls,
             'boot': self.boot,
             'dev_mode': self.dev_mode,
-            'encryption': ('https-debug' if ssl_opts['certfile'] == DEFAULT_SSL_CERT else 'https') if ssl_opts else 'http',
+            'encryption': ('https-debug' if ssl_opts['certfile'] == settings.DEFAULT_SSL_CERT else 'https') if ssl_opts else 'http',
             'user_db': self.user_db,
         }))
         
