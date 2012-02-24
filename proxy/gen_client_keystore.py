@@ -10,7 +10,7 @@ import tempfile
 # on the device. additional certificates may be added by specifying their
 # paths as command line arguments
 
-KEYSTORE = 'keystore'
+KEYSTORE = 'keystore.bks'
 SHAM_PASSWORD = 'password'
 
 def add_cert(i, cert):

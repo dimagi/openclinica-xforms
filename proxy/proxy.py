@@ -29,6 +29,7 @@ logger = logging.getLogger('proxy')
 logger.setLevel(logging.DEBUG)
 
 ODK_SUBMIT_PATH = 'submission'
+RESULTS_REPORT_PROXY = 'screening-report'
 
 class AuthenticationFailed(Exception):
     pass
@@ -66,9 +67,14 @@ class BaseHandler(web.RequestHandler):
     def post(self, auth_user, auth_pass):
         async(self, lambda: self.handle((auth_user, auth_pass)))
 
+    def content_type(self):
+        return 'json'
+
     def _success(self, result):
-        self.set_header('Content-Type', 'text/json')
-        self.write(json.dumps(result))
+        content = json.dumps(result) if self.content_type() == 'json' else result
+
+        self.set_header('Content-Type', 'text/%s' % self.content_type())
+        self.write(content)
 
     def _respond(self, success, result):
         if success:
@@ -124,6 +130,79 @@ class ValidatePINHandler(BaseHandler):
 
         return {'user': user}
 
+class ScreeningResultsHandler(web.RequestHandler): #BaseHandler):
+    def handle(self, auth):
+        # TOTALLY HACKED-UP SCREEN-SCRAPING METHOD
+
+        import urllib2
+        import urllib
+        import urlparse
+        import cookielib
+        from BeautifulSoup import BeautifulSoup
+        import re
+
+        LOGIN_PATH = 'OpenClinica/pages/login/login'
+        REPORT_PATH_HARDCODED = 'OpenClinica/ViewSectionDataEntry?eventDefinitionCRFId=2&ecId=49&tabId=1&eventId=104'
+
+        def _url(path):
+            urlp = urlparse.urlparse(settings.OPENCLINICA_SERVER)
+            base_server = '%s://%s' % (urlp.scheme, urlp.netloc)
+            return urlparse.urljoin(base_server, path)
+
+        f = urllib2.urlopen(_url(LOGIN_PATH))
+        doc = BeautifulSoup(f)
+        form = doc.find('form', action=re.compile('j_spring_security_check'))
+
+        payload = urllib.urlencode({
+            'j_username': auth[0],
+            'j_password': auth[1],
+        })
+
+        cj = cookielib.CookieJar()
+        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        opener.open(_url(form['action']), payload)
+
+        f = opener.open(_url(REPORT_PATH_HARDCODED))
+        return f.read()
+
+    def content_type(self):
+        return 'html'
+
+    def initialize(self, conn, **kwargs):
+        self.conn = conn
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+    @web.asynchronous
+    def get(self, auth_user='droos', auth_pass='password'):
+        async(self, lambda: self.handle((auth_user, auth_pass)))
+
+    @web.asynchronous
+    def post(self, auth_user='droos', auth_pass='password'):
+        async(self, lambda: self.handle((auth_user, auth_pass)))
+
+    def _success(self, result):
+        content = json.dumps(result) if self.content_type() == 'json' else result
+
+        self.set_header('Content-Type', 'text/%s' % self.content_type())
+        self.write(content)
+
+    def _respond(self, success, result):
+        if success:
+            self._success(result)
+            self.finish()
+        else:
+            if result == 'auth failed':
+                self.set_status(401)
+            else:
+                # this doesn't seem to work
+                # raise HTTPError(500, result)
+                self.set_status(500)
+            self.write(result)
+            self.finish()
+
+
+
 class SubmitHandler(BaseHandler):
     def head(self):
         scheme = self.request.protocol #'http' # will need to support https eventually?
@@ -168,9 +247,12 @@ def report_url(base_url, **kwargs):
         'study_oid': util.make_oid(kwargs['study_id'], 'study'),
         'subj_oid': util.make_oid(kwargs['subject_id'], 'subj'),
         'form_id': 'F_CPCS_RESULTS_1', # i can't find a way to not hard-code this at the moment
+        'root': RESULTS_REPORT_PROXY,
     })
-    url_root = 'OpenClinica'.join(base_url.split('OpenClinica-ws'))
-    url_rel = 'ClinicalData/html/view/%(study_oid)s/%(subj_oid)s/%(studyevent_id)s[%(event_ix)d]/%(form_id)s?&tabId=1' % kwargs
+    #url_root = 'OpenClinica'.join(base_url.split('OpenClinica-ws'))
+    url_root = '/'
+    #url_rel = 'ClinicalData/html/view/%(study_oid)s/%(subj_oid)s/%(studyevent_id)s[%(event_ix)d]/%(form_id)s?&tabId=1' % kwargs
+    url_rel = '%(root)s/%(study_oid)s/%(subj_oid)s/%(studyevent_id)s/%(event_ix)d/%(form_id)s?tabId=1' % kwargs
     return util.urlconcat(url_root, url_rel)
 
 
@@ -348,9 +430,10 @@ if __name__ == "__main__":
             'encryption': ssl_opts,
             'user_db': user_db,
         }),
-        (r'/screening-report', RetrieveScreeningHandler, {'conn': conn}),
+        (r'/screening-report-url', RetrieveScreeningHandler, {'conn': conn}),
         (r'/validate-pin', ValidatePINHandler, {'conn': conn, 'user_db': user_db}),
         (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn, 'xform_path': options.xform}),
+        (r'/%s/.*' % RESULTS_REPORT_PROXY, ScreeningResultsHandler, {'conn': conn}),
     ])
     application.listen(options.port, ssl_options=ssl_opts)
     logging.info('proxy initialized and ready to take requests')
