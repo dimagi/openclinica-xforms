@@ -130,7 +130,7 @@ class ValidatePINHandler(BaseHandler):
 
         return {'user': user}
 
-class ScreeningResultsHandler(web.RequestHandler): #BaseHandler):
+class ScreeningResultsHandler(BaseHandler):
     def handle(self, auth):
         # TOTALLY HACKED-UP SCREEN-SCRAPING METHOD
 
@@ -167,41 +167,6 @@ class ScreeningResultsHandler(web.RequestHandler): #BaseHandler):
 
     def content_type(self):
         return 'html'
-
-    def initialize(self, conn, **kwargs):
-        self.conn = conn
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
-
-    @web.asynchronous
-    def get(self, auth_user='droos', auth_pass='password'):
-        async(self, lambda: self.handle((auth_user, auth_pass)))
-
-    @web.asynchronous
-    def post(self, auth_user='droos', auth_pass='password'):
-        async(self, lambda: self.handle((auth_user, auth_pass)))
-
-    def _success(self, result):
-        content = json.dumps(result) if self.content_type() == 'json' else result
-
-        self.set_header('Content-Type', 'text/%s' % self.content_type())
-        self.write(content)
-
-    def _respond(self, success, result):
-        if success:
-            self._success(result)
-            self.finish()
-        else:
-            if result == 'auth failed':
-                self.set_status(401)
-            else:
-                # this doesn't seem to work
-                # raise HTTPError(500, result)
-                self.set_status(500)
-            self.write(result)
-            self.finish()
-
-
 
 class SubmitHandler(BaseHandler):
     def head(self):
