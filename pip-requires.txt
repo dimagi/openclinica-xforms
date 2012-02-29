@@ -2,4 +2,4 @@ suds
 tornado
 ply
 lxml
-
+BeautifulSoup
