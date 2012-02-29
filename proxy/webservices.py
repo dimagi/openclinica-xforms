@@ -122,17 +122,21 @@ if __name__ == "__main__":
     from datetime import datetime, date, timedelta
 
 #    SUBJ = 'K%06d' % random.randint(0, 999999)
-    SUBJ = '10003'
+    SUBJ = '10175'
 
-    conn = connect(SOAP_URL, SUBJ_WSDL, USER, PASS)
+    def auth(conn):
+        authenticate(conn, (USER, PASS))
+        return conn
+
+    conn = auth(connect(SOAP_URL, SUBJ_WSDL))
 #    print lookup_subject(conn, SUBJ, 'CPCS')
     create_subject(conn, SUBJ, date.today(), 'f', 'mike', 'CPCS')
 
-    conn = connect(SOAP_URL, SE_WSDL, USER, PASS)
+    conn = auth(connect(SOAP_URL, SE_WSDL))
     offset = timedelta(hours=1)
     event_num = sched(conn, SUBJ, 'SE_CPCS', 'burgdorf', datetime.now() - timedelta(minutes=5) + offset, datetime.now() + offset, 'CPCS')
 
-    conn = connect(SOAP_URL, DATA_WSDL, USER, PASS)
+    conn = auth(connect(SOAP_URL, DATA_WSDL))
     with open('/home/drew/tmp/crfinst.xml') as f:
         submit(conn, et.parse(f).getroot())
 

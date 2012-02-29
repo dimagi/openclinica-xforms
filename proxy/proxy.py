@@ -142,11 +142,21 @@ class ScreeningResultsHandler(BaseHandler):
         import re
 
         LOGIN_PATH = 'OpenClinica/pages/login/login'
-        REPORT_PATH_HARDCODED = 'OpenClinica/ViewSectionDataEntry?eventDefinitionCRFId=2&ecId=49&tabId=1&eventId=104'
+        REPORT_PATH_TEMPLATE = 'OpenClinica/ClinicalData/html/view/%(study_oid)s/%(subj_oid)s/%(studyevent_id)s%%5B%(event_ix)d%%5D/%(form_id)s?exitTo=none'
+
+        url_params = {
+            'study_oid': self.get_argument('study_id'),
+            'subj_oid': self.get_argument('subject_id'),
+            'studyevent_id': self.get_argument('sevt_id'),
+            'event_ix': int(self.get_argument('event_ix')),
+            'form_id': self.get_argument('form_id'),
+        }
+        report_path = REPORT_PATH_TEMPLATE % url_params
 
         def _url(path):
             urlp = urlparse.urlparse(settings.OPENCLINICA_SERVER)
             base_server = '%s://%s' % (urlp.scheme, urlp.netloc)
+            print urlparse.urljoin(base_server, path)
             return urlparse.urljoin(base_server, path)
 
         f = urllib2.urlopen(_url(LOGIN_PATH))
@@ -162,7 +172,7 @@ class ScreeningResultsHandler(BaseHandler):
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
         opener.open(_url(form['action']), payload)
 
-        f = opener.open(_url(REPORT_PATH_HARDCODED))
+        f = opener.open(_url(report_path))
         return f.read()
 
     def content_type(self):
@@ -216,8 +226,7 @@ def report_url(base_url, **kwargs):
     })
     #url_root = 'OpenClinica'.join(base_url.split('OpenClinica-ws'))
     url_root = '/'
-    #url_rel = 'ClinicalData/html/view/%(study_oid)s/%(subj_oid)s/%(studyevent_id)s[%(event_ix)d]/%(form_id)s?&tabId=1' % kwargs
-    url_rel = '%(root)s/%(study_oid)s/%(subj_oid)s/%(studyevent_id)s/%(event_ix)d/%(form_id)s?tabId=1' % kwargs
+    url_rel = '%(root)s?study_id=%(study_oid)s&subject_id=%(subj_oid)s&sevt_id=%(studyevent_id)s&event_ix=%(event_ix)d&form_id=%(form_id)s' % kwargs
     return util.urlconcat(url_root, url_rel)
 
 
@@ -398,7 +407,7 @@ if __name__ == "__main__":
         (r'/screening-report-url', RetrieveScreeningHandler, {'conn': conn}),
         (r'/validate-pin', ValidatePINHandler, {'conn': conn, 'user_db': user_db}),
         (r'/%s' % ODK_SUBMIT_PATH, SubmitHandler, {'conn': conn, 'xform_path': options.xform}),
-        (r'/%s/.*' % RESULTS_REPORT_PROXY, ScreeningResultsHandler, {'conn': conn}),
+        (r'/%s' % RESULTS_REPORT_PROXY, ScreeningResultsHandler, {'conn': conn}),
     ])
     application.listen(options.port, ssl_options=ssl_opts)
     logging.info('proxy initialized and ready to take requests')
