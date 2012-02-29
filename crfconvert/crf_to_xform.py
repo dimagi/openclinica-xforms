@@ -255,6 +255,9 @@ def _find_item(form, id):
     parent = [n for n in _all_instance_nodes(form, True) if hasattr(n, 'items') and i in n.items][0]
     return (i, parent)
 
+def numchoices(id, min, max):
+    return ChoiceList(id, None, None, [Choice(str(k), str(k)) for k in range(min, max)])
+
 def inject_structure(form, rules, options):
     crf_group = QuestionGroup('crf', None, form.items)
 
@@ -276,8 +279,10 @@ def inject_structure(form, rules, options):
         INCH_SUFFIX = ' (in inches)' 
         q_height, height_parent = _find_item(form, HEIGHT_ID)
         if q_height.label.endswith(INCH_SUFFIX): #ghetto
-            height_ft = Question('height_feet', None, 'integer', q_height.label[:-len(INCH_SUFFIX)] + '\n\n(feet)', None)
-            height_in = Question('height_inches', None, 'integer', '(inches)', None)
+            height_ft = Question('height_feet', None, 'choice', q_height.label[:-len(INCH_SUFFIX)] + '\n\n(feet)', numchoices('heightft', 4, 8))
+            height_in = Question('height_inches', None, 'choice', '(inches)', numchoices('heightin', 0, 12))
+            height_ft.required = True
+            height_in.required = True
             q_height.label = None
 
             qc_height = QuestionGroup('__%s' % HEIGHT_ID, None, [height_ft, height_in], True)
