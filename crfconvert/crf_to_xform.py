@@ -169,8 +169,8 @@ def parse_item(item_node, code_lists, units={}):
     q_node = item_node.find(_('Question'))
     if q_node is None:
         #calculated field only?
-        label = '[[ %s : calculate / preload?? ]]' % name
-        #return None
+        #label = '[[ %s : calculate / preload?? ]]' % name
+        return None
     else:
         label = q_node.find(_('TranslatedText')).text.strip()
         if unit:
@@ -195,10 +195,13 @@ def parse_group(group_node, items):
     child_nodes = sorted(group_node.findall(_('ItemRef')), key=lambda node: int(node.attrib['OrderNumber']))
 
     def get_child(itemrefnode):
-        child = items[itemrefnode.attrib['ItemOID']]
+        try:
+            child = items[itemrefnode.attrib['ItemOID']]
+        except KeyError:
+            return None
         child.required = (itemrefnode.attrib['Mandatory'].lower() == 'yes')
         return child
-    children = [get_child(c) for c in child_nodes]
+    children = filter(lambda e: e, (get_child(c) for c in child_nodes))
 
     return QuestionGroup(id, name, children)
 
@@ -279,7 +282,7 @@ def inject_structure(form, rules, options):
         INCH_SUFFIX = ' (in inches)' 
         q_height, height_parent = _find_item(form, HEIGHT_ID)
         if q_height.label.endswith(INCH_SUFFIX): #ghetto
-            height_ft = Question('height_feet', None, 'choice', q_height.label[:-len(INCH_SUFFIX)] + '\n\n(feet)', numchoices('heightft', 4, 8))
+            height_ft = Question('height_feet', None, 'choice', q_height.label[:-len(INCH_SUFFIX)] + '\n\n(feet)', numchoices('heightft', 4, 7))
             height_in = Question('height_inches', None, 'choice', '(inches)', numchoices('heightin', 0, 12))
             height_ft.required = True
             height_in.required = True
@@ -288,6 +291,20 @@ def inject_structure(form, rules, options):
             qc_height = QuestionGroup('__%s' % HEIGHT_ID, None, [height_ft, height_in], True)
             height_parent.items.insert(height_parent.items.index(q_height), qc_height)
             rules.append(XRule('calculated', q_height, '12 * %s + %s', height_ft, height_in))
+
+    def num_constraint(field, min, max):
+        q, _ = _find_item(form, field)
+        rules.append(XRule('constraint', q, '. >= %g and . <= %g' % (min, max)))
+
+    num_constraint('I_CPCS_AGE', 15, 110)
+    num_constraint('I_CPCS_WEIGHT', 50, 400)
+    num_constraint('I_CPCS_TYPICAL_DRINK', 0, 40)
+    num_constraint('I_CPCS_MAXIMUM_DRINKS', 0, 40)
+    num_constraint('I_CPCS_NUMBER_PARTNERS', 0, 50)
+
+    q_days_per_week_boozing, _ = _find_item(form, 'I_CPCS_DRINKS')
+    q_days_per_week_boozing.datatype = 'choice'
+    q_days_per_week_boozing._ch = numchoices('dpwdrink', 0, 8)
 
     # kill literacy section
     lit, parent = _find_item(form, 'IG_CPCS_LITERACY')
@@ -432,20 +449,18 @@ def build_binds(node, form, rules):
             node.append(bind)
 
 def build_bind_rules(bind, o, rules, form):
+    matching_rules = [r for r in rules if r.target == o.id]
 
+    for rule in matching_rules:
+        build_bind_rule(bind, rule, form)
+
+    return bool(matching_rules)
+
+def build_bind_rule(bind, rule, form):
     def oid_to_ref(oid):
         if '.' in oid:
             raise Exception('don\'t support compound oids yet')
         return xpathref(oid, form)
-
-    matching_rules = [r for r in rules if r.target == o.id]
-
-    if len(matching_rules) > 1:
-        sys.stderr.write('item [%s] with more than one rule -- not supported yet\n' % o.id)
-    rule = (matching_rules[0] if matching_rules else None)
-
-    if not rule:
-        return False
 
     #todo: warning if 'trigger' does not appear in expr
 
@@ -458,8 +473,6 @@ def build_bind_rules(bind, o, rules, form):
 
     if rule.action == 'constraint' and rule.constraint_msg:
         bind.attrib[_('constraintMsg', 'jr')] = rule.constraint_msg
-
-    return True
 
 noderefs = {}
 def xpathref(oid, form):
