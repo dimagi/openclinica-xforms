@@ -5,8 +5,7 @@
       <ns1:instance>
         <ns2:F_CPCS_LIT xmlns:ns2="http://openclinica.org/xform/S_CPCS/v1.0.0/SE_CPCS/lit/">
           <ns2:IG_CPCS_LITERACY>
-            <ns2:I_CPCS_LIT1A/>
-            <ns2:I_CPCS_LIT1B/>
+            <ns2:I_CPCS_LIT1/>
             <ns2:I_CPCS_LIT2A/>
             <ns2:I_CPCS_LIT2B/>
             <ns2:I_CPCS_LIT3A/>
@@ -14,8 +13,7 @@
           </ns2:IG_CPCS_LITERACY>
         </ns2:F_CPCS_LIT>
       </ns1:instance>
-      <ns1:bind nodeset="/F_CPCS_LIT/IG_CPCS_LITERACY/I_CPCS_LIT1A" required="true()"/>
-      <ns1:bind nodeset="/F_CPCS_LIT/IG_CPCS_LITERACY/I_CPCS_LIT1B" required="true()"/>
+      <ns1:bind nodeset="/F_CPCS_LIT/IG_CPCS_LITERACY/I_CPCS_LIT1" required="true()"/>
       <ns1:bind nodeset="/F_CPCS_LIT/IG_CPCS_LITERACY/I_CPCS_LIT2A" required="true()"/>
       <ns1:bind nodeset="/F_CPCS_LIT/IG_CPCS_LITERACY/I_CPCS_LIT2B" required="true()"/>
       <ns1:bind nodeset="/F_CPCS_LIT/IG_CPCS_LITERACY/I_CPCS_LIT3A" required="true()"/>
@@ -23,27 +21,37 @@
       <ns1:itext>
         <ns1:translation default="" lang="en">
           <ns1:text id="I_CPCS_LIT1">
-            <ns1:value>You must have an _________ stomach when you come for _______.</ns1:value>
-            <ns1:value form="audio">jrtts://Instructions about the test, put your glasses on, et cetera</ns1:value>
+            <ns1:value>Now, I’d like to check your ability to read and understand the things doctors often give patients, like medical instructions. I want you to fill in the missing words. Below the blank line, we've listed 4 possible words to complete the sentence. Choose the word that makes the most sense.
+
+Your doctor has sent you to have a ____ X-ray.</ns1:value>
+            <ns1:value form="audio">jrtts://Now, I’d like to check your ability to read and understand the things doctors often give patients, like medical instructions. I want you to fill in the missing words. Below the blank line, we've listed 4 possible words to complete the sentence. Choose the word that makes the most sense.</ns1:value>
           </ns1:text>
           <ns1:text id="I_CPCS_LIT2">
-            <ns1:value>The X-ray will ________ from 1 to 3 _________ to do.</ns1:value>
+            <ns1:value>You must have an ____ stomach when you come for ____.</ns1:value>
           </ns1:text>
           <ns1:text id="I_CPCS_LIT3">
-            <ns1:value>For supper have only a ________ snack of fruit, __________ and jelly, with coffee or tea.</ns1:value>
+            <ns1:value>The X-ray will ____ from 1 to 3 ____ to do.</ns1:value>
           </ns1:text>
-        </ns1:translation>
-        <ns1:translation lang="es">
-          <ns1:text id="I_CPCS_LIT1">
-            <ns1:value>SP: You must have an _________ stomach when you come for _______.</ns1:value>
-            <ns1:value form="audio">jrtts://Instructions about the test, put your glasses on, et cetera</ns1:value>
-          </ns1:text>
-          <ns1:text id="I_CPCS_LIT2">
-            <ns1:value>SP: The X-ray will ________ from 1 to 3 _________ to do.</ns1:value>
-          </ns1:text>
-          <ns1:text id="I_CPCS_LIT3">
-            <ns1:value>SP: For supper have only a ________ snack of fruit, __________ and jelly, with coffee or tea.</ns1:value>
-          </ns1:text>
+          <ns1:text id="CH_1_A"><ns1:value>stomach</ns1:value></ns1:text>
+          <ns1:text id="CH_1_B"><ns1:value>diabetes</ns1:value></ns1:text>
+          <ns1:text id="CH_1_C"><ns1:value>stitches</ns1:value></ns1:text>
+          <ns1:text id="CH_1_D"><ns1:value>germs</ns1:value></ns1:text>
+          <ns1:text id="CH_2A_A"><ns1:value>asthma</ns1:value></ns1:text>
+          <ns1:text id="CH_2A_B"><ns1:value>empty</ns1:value></ns1:text>
+          <ns1:text id="CH_2A_C"><ns1:value>incest</ns1:value></ns1:text>
+          <ns1:text id="CH_2A_D"><ns1:value>anemia</ns1:value></ns1:text>
+          <ns1:text id="CH_2B_A"><ns1:value>is</ns1:value></ns1:text>
+          <ns1:text id="CH_2B_B"><ns1:value>am</ns1:value></ns1:text>
+          <ns1:text id="CH_2B_C"><ns1:value>if</ns1:value></ns1:text>
+          <ns1:text id="CH_2B_D"><ns1:value>it</ns1:value></ns1:text>
+          <ns1:text id="CH_3A_A"><ns1:value>take</ns1:value></ns1:text>
+          <ns1:text id="CH_3A_B"><ns1:value>view</ns1:value></ns1:text>
+          <ns1:text id="CH_3A_C"><ns1:value>talk</ns1:value></ns1:text>
+          <ns1:text id="CH_3A_D"><ns1:value>look</ns1:value></ns1:text>
+          <ns1:text id="CH_3B_A"><ns1:value>beds</ns1:value></ns1:text>
+          <ns1:text id="CH_3B_B"><ns1:value>brains</ns1:value></ns1:text>
+          <ns1:text id="CH_3B_C"><ns1:value>hours</ns1:value></ns1:text>
+          <ns1:text id="CH_3B_D"><ns1:value>diets</ns1:value></ns1:text>
         </ns1:translation>
       </ns1:itext>
     </ns1:model>
@@ -51,120 +59,45 @@
   <html:body>
     <ns1:group xmlns:ns1="http://www.w3.org/2002/xforms" ref="IG_CPCS_LITERACY">
       <ns1:label>LITERACY</ns1:label>
-      <ns1:select1 ref="I_CPCS_LIT1A">
+      <ns1:select1 ref="I_CPCS_LIT1">
         <ns1:label ref="jr:itext('I_CPCS_LIT1')"/>
-        <ns1:item>
-          <ns1:label>asthma</ns1:label>
-          <ns1:value>1</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>empty</ns1:label>
-          <ns1:value>10</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>incest</ns1:label>
-          <ns1:value>2</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>anemia</ns1:label>
-          <ns1:value>3</ns1:value>
-        </ns1:item>
+        <ns1:item><ns1:label ref="jr:itext('CH_1_A')" /><ns1:value>yes</ns1:value></ns1:item>
+        <ns1:item><ns1:label ref="jr:itext('CH_1_B')" /><ns1:value>no1</ns1:value></ns1:item>
+        <ns1:item><ns1:label ref="jr:itext('CH_1_C')" /><ns1:value>no2</ns1:value></ns1:item>
+        <ns1:item><ns1:label ref="jr:itext('CH_1_D')" /><ns1:value>no3</ns1:value></ns1:item>
       </ns1:select1>
-      <ns1:select1 ref="I_CPCS_LIT1B">
-        <ns1:label>.</ns1:label>
-        <ns1:item>
-          <ns1:label>A</ns1:label>
-          <ns1:value>1</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>B</ns1:label>
-          <ns1:value>10</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>C</ns1:label>
-          <ns1:value>2</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>D</ns1:label>
-          <ns1:value>3</ns1:value>
-        </ns1:item>
-      </ns1:select1>
-      <ns1:select1 ref="I_CPCS_LIT2A">
-        <ns1:label ref="jr:itext('I_CPCS_LIT2')"/>
-        <ns1:item>
-          <ns1:label>take</ns1:label>
-          <ns1:value>10</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>view</ns1:label>
-          <ns1:value>1</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>talk</ns1:label>
-          <ns1:value>2</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>look</ns1:label>
-          <ns1:value>3</ns1:value>
-        </ns1:item>
-      </ns1:select1>
-      <ns1:select1 ref="I_CPCS_LIT2B">
-        <ns1:label>.</ns1:label>
-        <ns1:item>
-          <ns1:label>E</ns1:label>
-          <ns1:value>10</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>F</ns1:label>
-          <ns1:value>1</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>G</ns1:label>
-          <ns1:value>2</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>H</ns1:label>
-          <ns1:value>3</ns1:value>
-        </ns1:item>
-      </ns1:select1>
-      <ns1:select1 ref="I_CPCS_LIT3A">
-        <ns1:label ref="jr:itext('I_CPCS_LIT3')"/>
-        <ns1:item>
-          <ns1:label>little</ns1:label>
-          <ns1:value>10</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>broth</ns1:label>
-          <ns1:value>1</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>attack</ns1:label>
-          <ns1:value>2</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>nausea</ns1:label>
-          <ns1:value>3</ns1:value>
-        </ns1:item>
-      </ns1:select1>
-      <ns1:select1 ref="I_CPCS_LIT3B">
-        <ns1:label>.</ns1:label>
-        <ns1:item>
-          <ns1:label>I</ns1:label>
-          <ns1:value>10</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>J</ns1:label>
-          <ns1:value>1</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>K</ns1:label>
-          <ns1:value>2</ns1:value>
-        </ns1:item>
-        <ns1:item>
-          <ns1:label>L</ns1:label>
-          <ns1:value>3</ns1:value>
-        </ns1:item>
-      </ns1:select1>
+      <ns1:group appearance="field-list">
+        <ns1:select1 ref="I_CPCS_LIT2A">
+          <ns1:label ref="jr:itext('I_CPCS_LIT2')"/>
+          <ns1:item><ns1:label ref="jr:itext('CH_2A_A')" /><ns1:value>no1</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_2A_B')" /><ns1:value>yes</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_2A_C')" /><ns1:value>no2</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_2A_D')" /><ns1:value>no3</ns1:value></ns1:item>
+        </ns1:select1>
+        <ns1:select1 ref="I_CPCS_LIT2B">
+          <ns1:label>-</ns1:label>
+          <ns1:item><ns1:label ref="jr:itext('CH_2B_A')" /><ns1:value>no1</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_2B_B')" /><ns1:value>no2</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_2B_C')" /><ns1:value>no3</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_2B_D')" /><ns1:value>yes</ns1:value></ns1:item>
+        </ns1:select1>
+      </ns1:group>
+      <ns1:group appearance="field-list">
+        <ns1:select1 ref="I_CPCS_LIT3A">
+          <ns1:label ref="jr:itext('I_CPCS_LIT3')"/>
+          <ns1:item><ns1:label ref="jr:itext('CH_3A_A')" /><ns1:value>yes</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_3A_B')" /><ns1:value>no1</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_3A_C')" /><ns1:value>no2</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_3A_D')" /><ns1:value>no3</ns1:value></ns1:item>
+        </ns1:select1>
+        <ns1:select1 ref="I_CPCS_LIT3B">
+          <ns1:label>-</ns1:label>
+          <ns1:item><ns1:label ref="jr:itext('CH_3B_A')" /><ns1:value>no1</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_3B_B')" /><ns1:value>no2</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_3B_C')" /><ns1:value>yes</ns1:value></ns1:item>
+          <ns1:item><ns1:label ref="jr:itext('CH_3B_D')" /><ns1:value>no3</ns1:value></ns1:item>
+        </ns1:select1>
+      </ns1:group>
     </ns1:group>
   </html:body>
 </html:html>
