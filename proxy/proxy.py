@@ -180,7 +180,7 @@ class ScreeningResultsHandler(BaseHandler):
 
 class SubmitHandler(BaseHandler):
     def head(self):
-        scheme = self.request.protocol #'http' # will need to support https eventually?
+        scheme = self.request.protocol
         host = self.request.host
 
         self.set_status(204)

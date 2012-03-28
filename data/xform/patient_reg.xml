@@ -35,9 +35,10 @@
   </select1>
 
   <select1 ref="low_literacy">
-    <label>Can the patient read fluently?</label>
-    <item><label>Yes</label><value>n</value></item>
-    <item><label>No, they require audio assistance to complete the form</label><value>y</value></item>
+    <label>Patient Literacy</label>
+    <item><label>Administer literacy test</label><value>test</value></item>
+    <item><label>Skip test and enable audio assistance</label><value>lowlit</value></item>
+    <!-- <item><label>Literate - no audio assistance</label><value>lit</value></item> -->
   </select1>
 
 </h:body>
