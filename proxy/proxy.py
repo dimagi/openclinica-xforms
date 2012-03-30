@@ -23,6 +23,7 @@ from datetime import datetime, date
 import csv
 import settings
 import re
+from xml.etree import ElementTree as et
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger('proxy')
@@ -195,9 +196,19 @@ class SubmitHandler(BaseHandler):
             raise HTTPError(500, 'don\'t understand submission content type')
 
         m = email.message_from_string('Content-Type: %s\n\n%s' % (content_type, payload))
-        form_part = [part for part in m.get_payload() if part.get('Content-Disposition').startswith('form-data')][0]
-        xfinst = form_part.get_payload()
-        logger.debug('received xform submission:\n%s' % util.dump_xml(xfinst, pretty=True))
+        form_parts = [part for part in m.get_payload() if part.get('Content-Disposition').startswith('form-data')]
+        xfinsts = [fp.get_payload() for fp in form_parts]
+        for xfi in xfinsts:
+            logger.debug('received xform submission:\n%s' % util.dump_xml(xfi, pretty=True))
+
+        # embed literacy test form into main screening form
+        xml = dict((util.split_tag(n.tag)[0], n) for n in [et.fromstring(xfi) for xfi in xfinsts])
+        lit_ns = [k for k in xml if k.endswith('/lit/')][0]
+        main_ns = (set(xml) - set([lit_ns])).pop()
+        for g in xml[lit_ns]:
+            xml[main_ns].find('{%s}crf' % main_ns).append(g)
+        xfinst = et.tostring(xml[main_ns])
+        logger.debug('consolidated xform submission:\n%s' % util.dump_xml(xfinst, pretty=True))
 
         resp = process_instance(xfinst, self.xform_path)
         if resp['odm']:
