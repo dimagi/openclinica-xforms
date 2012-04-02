@@ -206,6 +206,7 @@ class SubmitHandler(BaseHandler):
         lit_ns = [k for k in xml if k.endswith('/lit/')][0]
         main_ns = (set(xml) - set([lit_ns])).pop()
         for g in xml[lit_ns]:
+            # note, this mixes namespaces, but we strip those out during processing
             xml[main_ns].find('{%s}crf' % main_ns).append(g)
         xfinst = et.tostring(xml[main_ns])
         logger.debug('consolidated xform submission:\n%s' % util.dump_xml(xfinst, pretty=True))
