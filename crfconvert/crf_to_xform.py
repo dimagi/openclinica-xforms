@@ -574,7 +574,19 @@ def build_itext_entry(parent_node, ref, text):
     # temp
     vaud = et.SubElement(n, _('value', 'xf'))
     vaud.attrib['form'] = 'audio'
-    vaud.text = 'jrtts://'
+    vaud.text = 'jrtts://' + ttstext(text)
+
+def ttstext(text):
+    replacements = {
+        '(s)': 's',
+        '(o)': '',
+        '(a)': '',
+        '(os)': '',
+        '(as)': '',
+    }
+
+    tts = reduce(lambda a, b: b[1].join(a.split(b[0])), replacements.iteritems(), text)
+    return tts if tts != text else ''
 
 def _addnode(parent, node):
     if node:

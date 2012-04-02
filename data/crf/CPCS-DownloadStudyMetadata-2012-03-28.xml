@@ -301,7 +301,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_AGE" Name="AGE" DataType="integer" Length="3" SASFieldName="AGE" Comment="Age" OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    General Information  - How old are you?
+                    How old are you?
                     </TranslatedText>
                 </Question>
                 <OpenClinica:ItemDetails ItemOID="I_CPCS_AGE">
@@ -437,7 +437,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_RATE_HEALTH" Name="RATE_HEALTH" DataType="integer" Length="2" SASFieldName="RATE_HEA" Comment="Overall, how would you rate your health?" OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    Health Section  - Overall, how would you rate your health?
+                    Overall, how would you rate your health?
                     </TranslatedText>
                 </Question>
                 <CodeListRef CodeListOID="CL_12"/>
@@ -572,7 +572,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_TYPICAL_DRINK" Name="TYPICAL_DRINK" DataType="integer" Length="3" SASFieldName="TYPICAL_" Comment="On a typical day when you drink, how many drinks do you have? A drink is defined as one 12 oz bottle of beer or wine cooler, a 5 oz glass of wine, or 1.5 ounces of distilled spirits. " OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    Alcohol  - On a typical day when you drink, how many drinks do you have? A drink is defined as one 12 oz bottle of beer or wine cooler, a 5 oz glass of wine, or 1.5 ounces of distilled spirits. &lt;img src="images/Alcohol_CHIN.bmp"&gt;
+                    On a typical day when you drink, how many drinks do you have? A drink is defined as one 12 oz bottle of beer or wine cooler, a 5 oz glass of wine, or 1.5 ounces of distilled spirits.
                     </TranslatedText>
                 </Question>
                 <OpenClinica:ItemDetails ItemOID="I_CPCS_TYPICAL_DRINK">
@@ -601,7 +601,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_HISTORY_COLON_CANCER" Name="HISTORY_COLON_CANCER" DataType="integer" Length="2" SASFieldName="HISTORY_" Comment="History Colon Cancer" OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    Colon  - Have you had a colonoscopy in the last ten years?
+                    Have you had a colonoscopy in the last ten years?
                     </TranslatedText>
                 </Question>
                 <CodeListRef CodeListOID="CL_10"/>
@@ -617,7 +617,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_WALK_TEST" Name="WALK_TEST" DataType="integer" Length="2" SASFieldName="WALK_TES" Comment="Have you fallen in the last year?" OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    Falls  - Have you fallen in the last year?
+                    Have you fallen in the last year?
                     </TranslatedText>
                 </Question>
                 <CodeListRef CodeListOID="CL_10"/>
@@ -648,7 +648,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_CONDOM_USER" Name="CONDOM_USER" DataType="integer" Length="2" SASFieldName="CONDOM_U" Comment="Condom Use" OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    Condom use  - How often do you use condoms with your sexual partner(s) when NOT trying to get pregnant?
+                    How often do you use condoms with your sexual partner(s) when NOT trying to get pregnant?
                     </TranslatedText>
                 </Question>
                 <CodeListRef CodeListOID="CL_13"/>
@@ -664,7 +664,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_PART_HURT" Name="PART_HURT" DataType="integer" Length="2" SASFieldName="PART_HUR" Comment="How often does your partner physically hurt you?" OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    Violence  - How often does your partner physically hurt you?
+                    How often does your partner physically hurt you?
                     </TranslatedText>
                 </Question>
                 <CodeListRef CodeListOID="CL_14"/>
@@ -725,7 +725,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_PLEASURE" Name="PLEASURE" DataType="integer" Length="2" SASFieldName="PLEASURE" Comment="Little interest or pleasure in doing things" OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    PHQ  - Little interest or pleasure in doing things
+                    Little interest or pleasure in doing things
                     </TranslatedText>
                 </Question>
                 <CodeListRef CodeListOID="CL_15"/>
@@ -877,7 +877,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_NIGHTMARES" Name="NIGHTMARES" DataType="integer" Length="2" SASFieldName="NIGHTMAR" Comment="I have nightmares or flashbacks" OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    PTSD  - I have nightmares or flashbacks
+                    I have nightmares or flashbacks
                     </TranslatedText>
                 </Question>
                 <CodeListRef CodeListOID="CL_17"/>
@@ -938,7 +938,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <ItemDef OID="I_CPCS_ENOUGH_FOOD" Name="ENOUGH_FOOD" DataType="integer" Length="2" SASFieldName="ENOUGH_F" Comment="Do you and your family have enough healthy food to eat?" OpenClinica:FormOIDs="F_CPCS_11">
                 <Question>
                     <TranslatedText>
-                    Living Situation  - Do you and your family have enough healthy food to eat?
+                    Do you and your family have enough healthy food to eat?
                     </TranslatedText>
                 </Question>
                 <CodeListRef CodeListOID="CL_10"/>
