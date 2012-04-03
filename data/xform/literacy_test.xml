@@ -53,6 +53,43 @@ Your doctor has sent you to have a ____ X-ray.</ns1:value>
           <ns1:text id="CH_3B_C"><ns1:value>hours</ns1:value></ns1:text>
           <ns1:text id="CH_3B_D"><ns1:value>diets</ns1:value></ns1:text>
         </ns1:translation>
+        <ns1:translation lang="es">
+          <ns1:text id="I_CPCS_LIT_BRIEF_1">
+            <ns1:value>Ahora quiero examinar su capacidad para leer y entender instrucciones médicas y otros papeles
+que los médicos les reparten a sus pacientes. Quiero que complete las frases que aparecen a
+continuación poniendo las palabras que faltan. Debajo de cada espacio en blanco hemos puesto
+cuatro opciones. Escoja la opción que tenga más sentido.
+
+Su médico le mandó sacarse una radiografía de ____.</ns1:value>
+            <ns1:value form="audio">jrtts://Ahora quiero examinar su capacidad para leer y entender instrucciones médicas y otros papeles que los médicos les reparten a sus pacientes. Quiero que complete las frases que aparecen a continuación poniendo las palabras que faltan. Debajo de cada espacio en blanco hemos puesto cuatro opciones. Escoja la opción que tenga más sentido.</ns1:value>
+          </ns1:text>
+          <ns1:text id="I_CPCS_LIT_BRIEF_2">
+            <ns1:value>Hay que tener el estómago ____ para venir por ____.</ns1:value>
+          </ns1:text>
+          <ns1:text id="I_CPCS_LIT_BRIEF_3">
+            <ns1:value>La radiografía ____ de una a tres ____ en salir.</ns1:value>
+          </ns1:text>
+          <ns1:text id="CH_1_A"><ns1:value>su estómago</ns1:value></ns1:text>
+          <ns1:text id="CH_1_B"><ns1:value>su diabetes</ns1:value></ns1:text>
+          <ns1:text id="CH_1_C"><ns1:value>sus puntos o suturas</ns1:value></ns1:text>
+          <ns1:text id="CH_1_D"><ns1:value>sus microbios</ns1:value></ns1:text>
+          <ns1:text id="CH_2A_A"><ns1:value>asma</ns1:value></ns1:text>
+          <ns1:text id="CH_2A_B"><ns1:value>vacío</ns1:value></ns1:text>
+          <ns1:text id="CH_2A_C"><ns1:value>incesto</ns1:value></ns1:text>
+          <ns1:text id="CH_2A_D"><ns1:value>anemia</ns1:value></ns1:text>
+          <ns1:text id="CH_2B_A"><ns1:value>es</ns1:value></ns1:text>
+          <ns1:text id="CH_2B_B"><ns1:value>nosotros</ns1:value></ns1:text>
+          <ns1:text id="CH_2B_C"><ns1:value>si</ns1:value></ns1:text>
+          <ns1:text id="CH_2B_D"><ns1:value>ella</ns1:value></ns1:text>
+          <ns1:text id="CH_3A_A"><ns1:value>tardará</ns1:value></ns1:text>
+          <ns1:text id="CH_3A_B"><ns1:value>mirará</ns1:value></ns1:text>
+          <ns1:text id="CH_3A_C"><ns1:value>hablará</ns1:value></ns1:text>
+          <ns1:text id="CH_3A_D"><ns1:value>verá</ns1:value></ns1:text>
+          <ns1:text id="CH_3B_A"><ns1:value>camas</ns1:value></ns1:text>
+          <ns1:text id="CH_3B_B"><ns1:value>cerebros</ns1:value></ns1:text>
+          <ns1:text id="CH_3B_C"><ns1:value>horas</ns1:value></ns1:text>
+          <ns1:text id="CH_3B_D"><ns1:value>dietas</ns1:value></ns1:text>
+        </ns1:translation>
       </ns1:itext>
     </ns1:model>
   </html:head>

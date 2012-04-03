@@ -203,11 +203,15 @@ class SubmitHandler(BaseHandler):
 
         # embed literacy test form into main screening form
         xml = dict((util.split_tag(n.tag)[0], n) for n in [et.fromstring(xfi) for xfi in xfinsts])
-        lit_ns = [k for k in xml if k.endswith('/lit/')][0]
+        try:
+            lit_ns = [k for k in xml if k.endswith('/lit/')][0]
+        except IndexError:
+            lit_ns = None
         main_ns = (set(xml) - set([lit_ns])).pop()
-        for g in xml[lit_ns]:
-            # note, this mixes namespaces, but we strip those out during processing
-            xml[main_ns].find('{%s}crf' % main_ns).append(g)
+        if lit_ns:
+            for g in xml[lit_ns]:
+                # note, this mixes namespaces, but we strip those out during processing
+                xml[main_ns].find('{%s}crf' % main_ns).append(g)
         xfinst = et.tostring(xml[main_ns])
         logger.debug('consolidated xform submission:\n%s' % util.dump_xml(xfinst, pretty=True))
 
