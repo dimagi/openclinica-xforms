@@ -106,7 +106,8 @@ class RetrieveScreeningHandler(BaseHandler):
         result = self.conn.lookup_subject(auth, subj_id, study_id)
         if result is not None:
             # study event and ordinal are hard-coded for now
-            url = report_url(self.conn.base_url, study_id=study_id, subject_id=subj_id, studyevent_id='SE_CPCS', event_ix=1)
+            se = dict(zip(['studyevent_id', 'event_ix'], settings.STUDY_EVENT_OID))
+            url = report_url(self.conn.base_url, study_id=study_id, subject_id=subj_id, **se)
         else:
             url = None
 
@@ -142,8 +143,8 @@ class ScreeningResultsHandler(BaseHandler):
         from BeautifulSoup import BeautifulSoup
         import re
 
-        LOGIN_PATH = 'OpenClinica/pages/login/login'
-        REPORT_PATH_TEMPLATE = 'OpenClinica/ClinicalData/html/view/%(study_oid)s/%(subj_oid)s/%(studyevent_id)s%%5B%(event_ix)d%%5D/%(form_id)s?exitTo=none'
+        LOGIN_PATH = 'pages/login/login'
+        REPORT_PATH_TEMPLATE = 'ClinicalData/html/view/%(study_oid)s/%(subj_oid)s/%(studyevent_id)s%%5B%(event_ix)d%%5D/%(form_id)s?exitTo=none'
 
         url_params = {
             'study_oid': self.get_argument('study_id'),
@@ -155,10 +156,15 @@ class ScreeningResultsHandler(BaseHandler):
         report_path = REPORT_PATH_TEMPLATE % url_params
 
         def _url(path):
-            urlp = urlparse.urlparse(settings.OPENCLINICA_SERVER)
-            base_server = '%s://%s' % (urlp.scheme, urlp.netloc)
-            print urlparse.urljoin(base_server, path)
-            return urlparse.urljoin(base_server, path)
+            if path.startswith('/'):
+                url = urlparse.urljoin(settings.OPENCLINICA_SERVER, path)
+            else:
+                base_url = re.sub('OpenClinica(?P<suff>[^/]*)-ws', lambda m: 'OpenClinica%s' % m.group('suff'), settings.OPENCLINICA_SERVER)
+                if not base_url.endswith('/'):
+                    base_url += '/'
+                url = base_url + path
+            print url
+            return url
 
         f = urllib2.urlopen(_url(LOGIN_PATH))
         doc = BeautifulSoup(f)
@@ -237,10 +243,10 @@ def report_url(base_url, **kwargs):
     kwargs.update({
         'study_oid': util.make_oid(kwargs['study_id'], 'study'),
         'subj_oid': util.make_oid(kwargs['subject_id'], 'subj'),
-        'form_id': 'F_CPCS_RESULTS_1', # i can't find a way to not hard-code this at the moment
+        'form_id': settings.RESULTS_FORM_OID, # i can't find a way to not hard-code this at the moment
         'root': RESULTS_REPORT_PROXY,
     })
-    #url_root = 'OpenClinica'.join(base_url.split('OpenClinica-ws'))
+    #url_root = 'OpenClinica'.join(base_url.split('OpenClinica-ws')) # note, this is NOT always accurate -- i.e. /OpenClinica_test/ <==> /OpenClinica_test-ws/
     url_root = '/'
     url_rel = '%(root)s?study_id=%(study_oid)s&subject_id=%(subj_oid)s&sevt_id=%(studyevent_id)s&event_ix=%(event_ix)d&form_id=%(form_id)s' % kwargs
     return util.urlconcat(url_root, url_rel)
