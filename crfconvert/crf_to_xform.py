@@ -15,6 +15,7 @@ import csv
 from optparse import OptionParser
 import util
 import json
+import re
 
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
@@ -586,6 +587,10 @@ def ttstext(text):
     }
 
     tts = reduce(lambda a, b: b[1].join(a.split(b[0])), replacements.iteritems(), text)
+
+    if re.match(r'[ABCDEFGHIJKLMNO]\. ', tts):
+        tts = '%s: %s' % (tts[0], tts[3:])
+
     return tts if tts != text else ''
 
 def _addnode(parent, node):

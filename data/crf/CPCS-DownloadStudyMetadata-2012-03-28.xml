@@ -1698,7 +1698,7 @@ Your doctor has sent you to have a __________ X-ray.</OpenClinica:LeftItemText>
             <CodeList OID="CL_9" Name="ethnicity" DataType="integer" SASFormatName="ETHNI02X">
                 <CodeListItem CodedValue="10">
                     <Decode>
-                        <TranslatedText>A.Hispanic or Latino</TranslatedText>
+                        <TranslatedText>A. Hispanic or Latino</TranslatedText>
                     </Decode>
                 </CodeListItem>
                 <CodeListItem CodedValue="20">
