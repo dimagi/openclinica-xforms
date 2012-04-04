@@ -410,13 +410,13 @@ if __name__ == "__main__":
 
     (options, args) = parser.parse_args()
     try:
-        url = args[0]
+        settings.OPENCLINICA_SERVER = args[0]
     except IndexError:
-        url = settings.OPENCLINICA_SERVER
+        pass
     ssl_opts = validate_ssl(options.sslcert, options.dev_mode)
     user_db = load_users(options.userdb, options.dev_mode)
 
-    conn = WSDL(url)
+    conn = WSDL(settings.OPENCLINICA_SERVER)
 
     application = web.Application([
         (r'/', DashboardHandler, {
