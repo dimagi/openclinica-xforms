@@ -31,7 +31,7 @@ MIN_PIN_LENGTH = 5
 # path of bouncycastle jar file
 BOUNCYCASTLE_JAR = '/usr/share/java/bcprov.jar'
 
-RESULTS_FORM_OID = 'F_CPCS_RESULTS_13A'
+RESULTS_FORM_OID = 'F_CPCS_RESULTS_13C'
 STUDY_EVENT_OID = ('SE_CPCS', 1)
 
 
