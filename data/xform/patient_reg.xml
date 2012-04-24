@@ -11,7 +11,7 @@
         <pat_id />
         <initials />
         <lang />
-        <low_literacy />
+        <low_literacy>test</low_literacy>
 			</reg>
 		</instance>
 	
@@ -34,12 +34,13 @@
     <item><label>Spanish</label><value>es</value></item>
   </select1>
 
+<!--
   <select1 ref="low_literacy">
     <label>Patient Literacy</label>
     <item><label>Administer literacy test</label><value>test</value></item>
     <item><label>Skip test and enable audio assistance</label><value>lowlit</value></item>
-    <!-- <item><label>Literate - no audio assistance</label><value>lit</value></item> -->
   </select1>
+-->
 
 </h:body>
 </h:html>
