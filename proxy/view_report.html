@@ -1,0 +1,46 @@
+<html>
+<head>
+
+<script>
+
+DOMAIN = 'https://75.144.154.137:8070'
+FORM_VERSION = '13C';
+INSTANCE = '';
+
+ROOT_URL = DOMAIN + '/OpenClinica' + INSTANCE + '/';
+REPORT_URL = ROOT_URL + 'ClinicalData/html/view/S_CPCS/SS_{patid}/SE_CPCS%5B1%5D/F_CPCS_RESULTS_' + FORM_VERSION + '?exitTo=none';
+
+function init() {
+    var loginlink = document.getElementById('oc_login');
+    if (loginlink != null) {
+        loginlink.href = ROOT_URL;
+    }
+}
+
+function load_report() {
+    var patient_id = document.getElementById('patient_id').value;
+    patient_id = patient_id.replace(/ /g, '');
+    if (patient_id == '') {
+        alert('Please enter a patient ID');
+    } else {
+        window.location = REPORT_URL.replace('{patid}', patient_id);
+    }
+}
+
+</script>
+
+</head>
+<body onload="init();">
+
+<h1>Load Screening</h1>
+
+<!--
+<p>
+<a id="oc_login">Log into OpenClinica</a> first, then return to this page
+</p>
+-->
+
+Patient ID: <input id="patient_id" type="text"></input><button onclick="load_report();">View Report</button>
+
+</body>
+</html>
