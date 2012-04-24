@@ -310,6 +310,11 @@ def inject_structure(form, rules, options):
     # kill literacy section
     lit, parent = _find_item(form, 'IG_CPCS_LITERACY')
     parent.items.remove(lit)
+    
+    depr_intro_caption = 'Over the last two weeks, how often have you been bothered by any of the following problems...'
+    g_depr, _ = _find_item(form, 'IG_CPCS_PHQ')
+    info_depr_intro = Question('__intro', None, 'info', depr_intro_caption, None)
+    g_depr.items.insert(0, info_depr_intro)
 
     form.items = [reg_group, crf_group, tmp_group]
 
