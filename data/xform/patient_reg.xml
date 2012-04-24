@@ -16,7 +16,7 @@
 		</instance>
 	
     <bind nodeset="pat_id" calculate="context('pat-id')" />
-    <bind nodeset="initials" required="true()" />
+    <bind nodeset="initials" required="true()" constraint="string-length(.) &lt;= 4" jr:constraintMsg="At most 4 letters allowed" />
     <bind nodeset="lang" required="true()" />
     <bind nodeset="low_literacy" required="true()" />
 

@@ -293,12 +293,19 @@ def inject_structure(form, rules, options):
             height_parent.items.insert(height_parent.items.index(q_height), qc_height)
             rules.append(XRule('calculated', q_height, '12 * %s + %s', height_ft, height_in))
 
-    def num_constraint(field, min, max):
+    def num_constraint(field, min, max, name=None):
         q, _ = _find_item(form, field)
-        rules.append(XRule('constraint', q, '. >= %g and . <= %g' % (min, max)))
+        constr = XRule('constraint', q, '. >= %g and . <= %g' % (min, max))
+        constr.constraint_msg = '%s must be between %d and %d' % (name or 'Answer', min, max)
+        rules.append(constr)
+    def len_constraint(field, maxlen, name=None):
+        q, _ = _find_item(form, field)
+        constr = XRule('constraint', q, 'string-length(.) <= %d' % maxlen)
+        constr.constraint_msg = '%s cannot be longer than %d characters' % (name or 'Answer', maxlen)
+        rules.append(constr)
 
-    num_constraint('I_CPCS_AGE', 15, 110)
-    num_constraint('I_CPCS_WEIGHT', 50, 400)
+    num_constraint('I_CPCS_AGE', 15, 110, 'Age')
+    num_constraint('I_CPCS_WEIGHT', 50, 400, 'Weight')
     num_constraint('I_CPCS_TYPICAL_DRINK', 0, 40)
     num_constraint('I_CPCS_MAXIMUM_DRINKS', 0, 40)
     num_constraint('I_CPCS_NUMBER_PARTNERS', 0, 50)

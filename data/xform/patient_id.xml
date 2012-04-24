@@ -20,7 +20,7 @@
 		</instance>
 	
     <bind nodeset="tmp/pat_id/scan" type="barcode" required="true()" relevant="setting('patid-mode') = 'scan'" />
-    <bind nodeset="tmp/pat_id/manual_1" type="int" required="true()" relevant="setting('patid-mode') = 'dbl-entry'" />
+    <bind nodeset="tmp/pat_id/manual_1" type="int" required="true()" relevant="setting('patid-mode') = 'dbl-entry'" constraint="string-length(.) &lt;= 8" jr:constraintMsg="Patient ID cannot be longer than 8 digits" />
     <bind nodeset="tmp/pat_id/manual_2" type="int" required="true()" relevant="setting('patid-mode') = 'dbl-entry'"
           constraint=". = ../manual_1" jr:constraintMsg="The patient IDs entered do not match!"/>
     <bind nodeset="pat_id" calculate="if(setting('patid-mode') = 'scan', /pat_id/tmp/pat_id/scan, /pat_id/tmp/pat_id/manual_1)" />
