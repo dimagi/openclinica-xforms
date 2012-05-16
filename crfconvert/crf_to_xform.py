@@ -606,7 +606,7 @@ def ttstext(text):
     return tts if tts != text else ''
 
 def _addnode(parent, node):
-    if node:
+    if node is not None:
         parent.append(node)
 
 def build_body(node, form):

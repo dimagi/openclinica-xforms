@@ -16,8 +16,8 @@ DATA_WSDL = 'ws/data/v1/dataWsdl.wsdl'
 def connect(base_url, wsdl):
     wsdl_url = util.urlconcat(base_url, wsdl)
 
+    logging.info('fetching wsdl %s' % wsdl_url)
     client = Client(wsdl_url)
-    logging.info('fetched wsdl %s' % wsdl_url)
 
     # this doesn't seem safe...
     endpoint = client.wsdl.services[0].ports[0].location[1:] # trim leading slash
