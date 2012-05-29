@@ -1,6 +1,7 @@
 from suds.client import Client
 from suds.wsse import Security, UsernameToken
 from suds.sax.text import Raw
+from suds.plugin import *
 from xml.etree import ElementTree as et
 import hashlib
 import urlparse
@@ -12,16 +13,37 @@ from contextlib import contextmanager
 SUBJ_WSDL = 'ws/studySubject/v1/studySubjectWsdl.wsdl'
 SE_WSDL = 'ws/event/v1/eventWsdl.wsdl'
 DATA_WSDL = 'ws/data/v1/dataWsdl.wsdl'
+STUDY_WSDL = 'ws/study/v1/studyWsdl.wsdl'
+
+class ODMResponsePlugin(MessagePlugin):
+    # FML!!!
+    def parsed(self, context):
+        resp = context.reply.getChild('Envelope').getChild('Body').getChild('createResponse')
+        result = resp.getChild('result')
+        export = resp.getChild('odm')
+        resp.remove(export)
+
+        if result.getText().lower() == 'success':
+            result.setText(export.getText())
+        else:
+            result.setText('')
 
 def connect(base_url, wsdl):
     wsdl_url = util.urlconcat(base_url, wsdl)
 
     logging.info('fetching wsdl %s' % wsdl_url)
-    client = Client(wsdl_url)
+    kwargs = {}
+    if wsdl == STUDY_WSDL:
+        kwargs['plugins'] = [ODMResponsePlugin()]
+    client = Client(wsdl_url, **kwargs)
 
     # this doesn't seem safe...
-    endpoint = client.wsdl.services[0].ports[0].location[1:] # trim leading slash
-    client.set_options(location=util.urlconcat(base_url, endpoint))
+    endpoint = client.wsdl.services[0].ports[0].location
+    if endpoint.startswith('/'):
+        endpoint = endpoint[1:]
+    if not endpoint.startswith('http'):
+        endpoint = util.urlconcat(base_url, endpoint)
+    client.set_options(location=endpoint)
 
     return client
 
@@ -94,6 +116,17 @@ def submit(conn, instnode):
     if resp.result.lower() != 'success':
         raise Exception([str(e) for e in resp.error])
 
+def study_export(conn, study_name):
+    study = conn.factory.create('ns0:siteRefType')
+    study.identifier = 'default-study'
+
+    resp = conn.service.getMetadata(study)
+    if resp.result:
+        return et.fromstring(resp.result)
+    else:
+        return None
+
+
 
 @contextmanager
 def raw_xml(conn):
@@ -112,21 +145,27 @@ def init_logging():
 
 if __name__ == "__main__":
     
-    SOAP_URL = 'https://75.144.154.137:8070/OpenClinica-ws/'
-    USER = 'droos'
+    SOAP_URL = 'https://jikan.eclinicalhosting.com/OpenClinica-test-ws/'
+    USER = 'root'
     PASS = 'password'
+    STUDY = 'default-study'
 
     init_logging()
 
+    def auth(conn):
+        authenticate(conn, (USER, PASS))
+        return conn
+
+    conn = auth(connect(SOAP_URL, STUDY_WSDL))
+
+    print study_export(conn, STUDY)
+
+    """
     import random
     from datetime import datetime, date, timedelta
 
 #    SUBJ = 'K%06d' % random.randint(0, 999999)
     SUBJ = '10175'
-
-    def auth(conn):
-        authenticate(conn, (USER, PASS))
-        return conn
 
     conn = auth(connect(SOAP_URL, SUBJ_WSDL))
 #    print lookup_subject(conn, SUBJ, 'CPCS')
@@ -139,4 +178,4 @@ if __name__ == "__main__":
     conn = auth(connect(SOAP_URL, DATA_WSDL))
     with open('/home/drew/tmp/crfinst.xml') as f:
         submit(conn, et.parse(f).getroot())
-
+"""
