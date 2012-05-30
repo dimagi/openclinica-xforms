@@ -122,6 +122,9 @@ def study_export(conn, study_name):
 
     resp = conn.service.getMetadata(study)
     if resp.result:
+        # debugging
+        with open('/tmp/exportdump', 'w') as f:
+            f.write(resp.result)
         return et.fromstring(resp.result)
     else:
         return None

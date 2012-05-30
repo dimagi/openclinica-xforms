@@ -8,7 +8,7 @@ from xml.etree import ElementTree as et
 from StringIO import StringIO
 import itertools
 import collections
-import expr_parse
+import crf_rules
 import hashlib
 from subprocess import Popen, PIPE
 import csv
@@ -251,7 +251,7 @@ def parse_study(docroot, options={}):
     forms = parse_forms(node, groups)
     rules = parse_rules(node.find(_('Rules', 'ocr')))
 
-    inject_structure(forms[0], rules, options)
+    #inject_structure(forms[0], rules, options)
     return (study_id, mdv), forms, rules
 
 def _find_item(form, id):
@@ -326,6 +326,9 @@ def inject_structure(form, rules, options):
     form.items = [reg_group, crf_group, tmp_group]
 
 def parse_rules(node):
+    if node is None:
+        return []
+
     ruledefs = parse_ruledefs(node)
     rules = list(itertools.chain(*(parse_ruleassn(n, ruledefs) for n in node.findall(_('RuleAssignment', 'ocr')))))
     return rules
@@ -337,7 +340,7 @@ def parse_ruledefs(node):
 def parse_ruledef(node):
     id = node.attrib['OID']
     expr = node.find(_('Expression', 'ocr')).text
-    return RuleDef(id, expr_parse.parse(expr))
+    return RuleDef(id, crf_rules.parse(expr))
 
 def parse_ruleassn(node, ruledefs):
     def actions(n):
@@ -672,9 +675,11 @@ def create_audio(text, lang):
 
     return 'jr://audio/%s' % filename
 
-def convert_xform(f, options={'dumptx': False, 'translations': None}):
-    doc = et.parse(f)
-    study_id, forms, rules = parse_study(doc.getroot(), options)
+def convert_xform(f, opts):
+    return _convert_xform(et.parse(f).getroot(), opts)
+
+def _convert_xform(root, options={'dumptx': False, 'translations': None}):
+    study_id, forms, rules = parse_study(root, options)
 
 #    util.pprint(forms)
 #    util.pprint(rules)
