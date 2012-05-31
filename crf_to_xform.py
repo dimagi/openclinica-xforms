@@ -495,10 +495,10 @@ def build_bind_rule(bind, rule, form):
 
 noderefs = {}
 def xpathref(oid, form):
-    if not noderefs:
-        noderefs.update(gen_refs(form))
+    if not noderefs.get(form):
+        noderefs[form] = dict(gen_refs(form))
 
-    return noderefs[oid]
+    return noderefs[form][oid]
     
 def gen_refs(o, path=['']):
     path.append(o.xpathname())
@@ -684,8 +684,8 @@ def convert_xform(f, opts):
 def _convert_xform(root, options={'dumptx': False, 'translations': None}):
     study_id, forms, rules = parse_study(root, options)
 
-#    util.pprint(forms)
-#    util.pprint(rules)
+    util.pprint(forms)
+    util.pprint(rules)
 
     errors = []
     def build_all():
