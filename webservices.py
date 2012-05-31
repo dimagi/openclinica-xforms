@@ -73,15 +73,15 @@ def lookup_subject(conn, subj_id, study_id):
     else:
         return None
 
-def create_subject(conn, subj_id, enrolled_on, gender, name, study_id):
+def create_subject(conn, subj_id, enrolled_on, birthdate, gender, name, study_id):
     subj = conn.factory.create('ns0:studySubjectType')
 
     subj.label = subj_id
     subj.secondaryLabel = name
     subj.enrollmentDate = enrolled_on.strftime('%Y-%m-%d')
     subj.subject = conn.factory.create('ns0:subjectType')
-    #subj.subject.uniqueIdentifier = subj_id   # not needed, apparently
-    #subj.subject.dateOfBirth = birthdate.strftime('%Y-%m-%d')  # don't care about collecting dob
+    subj.subject.uniqueIdentifier = subj_id
+    subj.subject.dateOfBirth = birthdate.strftime('%Y-%m-%d')  # don't care about collecting dob
     subj.subject.gender = gender
     subj.studyRef = conn.factory.create('ns0:studyRefType')
     subj.studyRef.identifier = study_id

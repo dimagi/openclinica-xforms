@@ -1,4 +1,4 @@
-from crfconvert.crf_to_xform import _, convert_xform
+from crf_to_xform import _, convert_xform
 from xml.etree import ElementTree as et
 import sys
 import re
@@ -29,11 +29,11 @@ def build_submission(root, ref_instance, reconcile=False):
 
     resp.update({
         'odm': odm,
-        'study_id': util.strip_oid(metadata['study'], 'study'),
+        'study_id': settings.STUDY_NAME, #util.strip_oid(metadata['study'], 'study'),
         'studyevent_id': metadata['studyevent'],
         'form_id': metadata['form'],
 
-        'location': settings.CLINIC_NAME,
+        'location': settings.SITE_ID,
     })
     return resp
 
@@ -55,18 +55,22 @@ def extract_data(instroot, xmlns):
     def _i(tag):
         return '{%s}%s' % (xmlns, tag)
 
+    #debug
+    import random
+    subj_id = 'K%d' % random.randint(0, 1000000)
+
     data = {
-        'subject_id': extract_subject(instroot, _i),
-        'gender': extract_field(instroot, 'I_CPCS_GENDER', _i, {'10': 'm', '20': 'f'}),
-        'name': extract_field(instroot, 'initials', _i),
+        'subject_id': subj_id, #extract_subject(instroot, _i),
+        'gender': 'm', #extract_field(instroot, 'I_CPCS_GENDER', _i, {'10': 'm', '20': 'f'}),
+        'name': subj_id, #extract_field(instroot, 'initials', _i),
         'start': datetime.now(), #TODO link to TimeStart
         'end': datetime.now(), #TODO link to TimeEnd
-        #'birthdate': date(1983, 10, 6), #birthdate is not used for this project
+        'birthdate': date(1983, 10, 6), # debug
     }
 
     def unwrap_inst(ref_instance, reconcile):
         def real_inst(root):
-            return root.find(_i('crf'))
+            return root #root.find(_i('crf'))
         crf_root = real_inst(instroot)
         trim_instance(crf_root)
         if reconcile:
