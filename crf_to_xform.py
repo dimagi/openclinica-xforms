@@ -16,6 +16,7 @@ from optparse import OptionParser
 import util
 import json
 import re
+import logging
 
 ChoiceList = collections.namedtuple('ChoiceList', ['id', 'name', 'datatype', 'choices'])
 RuleDef = collections.namedtuple('RuleDef', ['id', 'expr'])
@@ -429,8 +430,6 @@ def expr_to_xpath(expr, oid_to_ref):
 def build_xform(metadata, form, rules, options):
     #todo: namespaces; register_namespace only supported in py2.7
 
-    print '**', form.__dict__
-
     root = et.Element(_('html', 'h'))
     head = et.SubElement(root, _('head', 'h'))
     body = et.SubElement(root, _('body', 'h'))
@@ -688,7 +687,15 @@ def _convert_xform(root, options={'dumptx': False, 'translations': None}):
 #    util.pprint(forms)
 #    util.pprint(rules)
 
-    return build_xform(study_id, forms[0], rules, options)
+    errors = []
+    def build_all():
+        for form in forms:
+            try:
+                yield build_xform(study_id, form, rules, options)
+            except Exception, e:
+                logging.exception('error converting form')
+                errors.append('error converting CRF %s: %s %s' % (form.name, type(e), str(e)))
+    return list(build_all()), errors
 
 
 
