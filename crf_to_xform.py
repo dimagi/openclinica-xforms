@@ -115,8 +115,9 @@ class QuestionGroup(object):
         return self.id
 
 class Form(object):
-    def __init__(self, id, version, items):
+    def __init__(self, id, name, version, items):
         self.id = id
+        self.name = name
         self.version = version
         self.items = items
 
@@ -217,7 +218,7 @@ def parse_units(node):
 def parse_form(form_info, groups):
     child_nodes = form_info['node'].findall(_('ItemGroupRef'))
     children = [groups[c.attrib['ItemGroupOID']] for c in child_nodes]
-    return Form(form_info['id'], form_info['version'], children)
+    return Form(form_info['id'], form_info['name'], form_info['version'], children)
 
 def parse_forms(node, groups):
     studyevents = node.findall(_('StudyEventDef'))
@@ -235,7 +236,8 @@ def form_info(studyevent, formdefs):
     versions = [fr.attrib['FormOID'] for fr in studyevent.findall(_('FormRef'))]
     latest_version = versions[0]
     form_node = [n for n in formdefs if n.attrib['OID'] == latest_version][0]
-    return {'id': id, 'version': latest_version, 'node': form_node}
+    name = form_node.attrib['Name']
+    return {'id': id, 'name': name, 'version': latest_version, 'node': form_node}
 
 def parse_study(docroot, options={}):
     study = docroot.find(_('Study'))
@@ -427,12 +429,14 @@ def expr_to_xpath(expr, oid_to_ref):
 def build_xform(metadata, form, rules, options):
     #todo: namespaces; register_namespace only supported in py2.7
 
+    print '**', form.__dict__
+
     root = et.Element(_('html', 'h'))
     head = et.SubElement(root, _('head', 'h'))
     body = et.SubElement(root, _('body', 'h'))
 
     title = et.SubElement(head, _('title', 'h'))
-    title.text = '%s :: %s' % (form.id, form.version)
+    title.text = form.name  #'%s :: %s' % (form.id, form.version)
     model = et.SubElement(head, _('model', 'xf'))
     build_model(model, form, rules, metadata, options)
 
