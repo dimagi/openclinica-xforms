@@ -7,6 +7,7 @@ from StringIO import StringIO
 import util
 from datetime import date, datetime, timedelta
 import settings
+import logging
 
 def parse_metadata(root):
     xmlns, tag = util.split_tag(root.tag)
@@ -58,6 +59,7 @@ def extract_data(instroot, xmlns):
     #debug
     import random
     subj_id = 'K%d' % random.randint(0, 1000000)
+    logging.info('using random subject %s' % subj_id)
 
     data = {
         'subject_id': subj_id, #extract_subject(instroot, _i),

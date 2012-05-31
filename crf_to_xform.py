@@ -684,8 +684,8 @@ def convert_xform(f, opts):
 def _convert_xform(root, options={'dumptx': False, 'translations': None}):
     study_id, forms, rules = parse_study(root, options)
 
-    util.pprint(forms)
-    util.pprint(rules)
+    #util.pprint(forms)
+    #util.pprint(rules)
 
     errors = []
     def build_all():
@@ -693,7 +693,7 @@ def _convert_xform(root, options={'dumptx': False, 'translations': None}):
             try:
                 yield build_xform(study_id, form, rules, options)
             except Exception, e:
-                logging.exception('error converting form')
+                logging.exception('error converting form %s' % form.name)
                 errors.append('error converting CRF %s: %s %s' % (form.name, type(e), str(e)))
     return list(build_all()), errors
 
