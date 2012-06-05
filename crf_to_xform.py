@@ -500,7 +500,9 @@ def xpathref(oid, form):
 
     return noderefs[form][oid]
     
-def gen_refs(o, path=['']):
+def gen_refs(o, path=None):
+    path = path or ['']
+
     path.append(o.xpathname())
     yield (o.id, '/'.join(path))
     if hasattr(o, 'items'):
