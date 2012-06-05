@@ -138,7 +138,7 @@ def list_studies(conn):
     if resp.result.lower() == 'success':
         def get_study(s):
             data = s[1][0]
-            return {'id': data.identifier, 'oid': data.oid, 'name': data.name}
+            return {'identifier': data.identifier, 'oid': data.oid, 'name': data.name}
         return [get_study(s) for s in resp.studies]
     else:
         return None
