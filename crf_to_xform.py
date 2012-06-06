@@ -119,11 +119,11 @@ class Form(object):
     def __init__(self, studyevent_id, name, oid, items):
         self.study_event = studyevent_id
         self.name = name
-        self.oid = oid
+        self.id = oid
         self.items = items
 
     def xpathname(self):
-        return self.version
+        return self.id
 
 def _(tag, ns_prefix=None):
     namespace_uri = {
@@ -449,7 +449,7 @@ def expr_to_xpath(expr, oid_to_ref):
         }[expr[0]]
         return '%s %s %s' % (subexpr_to_xpath('left'), op, subexpr_to_xpath('right'))
 
-def build_xform(metadata, form, rules, options):
+def build_xform(form, metadata, options):
     #todo: namespaces; register_namespace only supported in py2.7
 
     root = et.Element(_('html', 'h'))
@@ -459,16 +459,16 @@ def build_xform(metadata, form, rules, options):
     title = et.SubElement(head, _('title', 'h'))
     title.text = form.name  #'%s :: %s' % (form.id, form.version)
     model = et.SubElement(head, _('model', 'xf'))
-    build_model(model, form, rules, metadata, options)
+    build_model(model, form, metadata, options)
 
     build_body(body, form)
 
     return root
 
-def build_model(node, form, rules, metadata, options):
+def build_model(node, form, metadata, options):
     inst = et.SubElement(node, _('instance', 'xf'))
     _build_inst(inst, form, metadata)
-    build_binds(node, form, rules)
+    build_binds(node, form, metadata['rules'])
     build_itext(node, form, options)
 
 def build_binds(node, form, rules):
@@ -541,7 +541,7 @@ def _all_instance_nodes(o, include_root=False):
                 yield node
 
 def _build_inst(inst_node, form, metadata):
-    xmlns = 'http://openclinica.org/xform/%s/%s/%s/' % (metadata[0], metadata[1], form.id)
+    xmlns = 'http://openclinica.org/xform/%s/%s/%s/%s/' % (metadata['study_id'], metadata['metadata_version'], form.study_event, form.id)
     build_inst(inst_node, form, xmlns)
 
 def build_inst(parent_node, instance_item, xmlns):
@@ -697,16 +697,18 @@ def _convert_xform(root, options={'dumptx': False, 'translations': None}):
 
     errors = []
     def build_all():
-        for form in forms:
+        for form in parsed_info['forms']:
             try:
-                yield build_xform(study_id, form, rules, options)
+                yield build_xform(form, parsed_info, options)
             except Exception, e:
                 logging.exception('error converting form %s' % form.name)
                 errors.append('error converting CRF %s: %s %s' % (form.name, type(e), str(e)))
-    return list(build_all()), errors
 
-# list of errors
-# list of crfs, each crf namespace: study, mdv, sevt / foid
+    return {
+        'study_events': parsed_info['events'],
+        'crfs': list(build_all()),
+        'errors': errors,
+    }
 
 
 
