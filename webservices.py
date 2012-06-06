@@ -19,6 +19,10 @@ class ODMResponsePlugin(MessagePlugin):
     # FML!!!
     def parsed(self, context):
         resp = context.reply.getChild('Envelope').getChild('Body').getChild('createResponse')
+        if resp is None:
+            # do nothing if payload is not a 'createResponse' type
+            return
+
         result = resp.getChild('result')
         export = resp.getChild('odm')
         resp.remove(export)
@@ -129,7 +133,15 @@ def study_export(conn, study_name):
     else:
         return None
 
-
+def list_studies(conn):
+    resp = conn.service.listAll()
+    if resp.result.lower() == 'success':
+        def get_study(s):
+            data = s[1][0]
+            return {'identifier': data.identifier, 'oid': data.oid, 'name': data.name}
+        return [get_study(s) for s in resp.studies]
+    else:
+        return None
 
 @contextmanager
 def raw_xml(conn):
@@ -161,7 +173,7 @@ if __name__ == "__main__":
 
     conn = auth(connect(SOAP_URL, STUDY_WSDL))
 
-    print study_export(conn, STUDY)
+    print list_studies(conn)
 
     """
     import random
