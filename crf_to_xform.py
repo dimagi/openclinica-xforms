@@ -116,10 +116,10 @@ class QuestionGroup(object):
         return self.id
 
 class Form(object):
-    def __init__(self, id, name, version, items):
-        self.id = id
+    def __init__(self, studyevent_id, name, oid, items):
+        self.study_event = studyevent_id
         self.name = name
-        self.version = version
+        self.oid = oid
         self.items = items
 
     def xpathname(self):
@@ -217,28 +217,41 @@ def parse_units(node):
     return dict(parse_unit(unit) for unit in node.findall('.//%s' % _('MeasurementUnit')))
 
 def parse_form(form_info, groups):
-    child_nodes = form_info['node'].findall(_('ItemGroupRef'))
+    form_name = form_info['form_node'].attrib['Name']
+    child_nodes = form_info['form_node'].findall(_('ItemGroupRef'))
     children = [groups[c.attrib['ItemGroupOID']] for c in child_nodes]
-    return Form(form_info['id'], form_info['name'], form_info['version'], children)
+    return Form(form_info['studyevent_id'], form_name, form_info['form_oid'], children)
+
+def parse_study_event(node):
+    return {
+        'oid': node.attrib['OID'],
+        'name': node.attrib['Name'],
+        'forms': [fr.attrib['FormOID'] for fr in node.findall(_('FormRef'))],
+    }
+
+def is_formdef_active(f):
+    return f.find(_('FormDetails', 'oc')).find(_('PresentInEventDefinition', 'oc')).attrib['IsDefaultVersion'].lower() == 'yes'
 
 def parse_forms(node, groups):
-    studyevents = node.findall(_('StudyEventDef'))
-    formdefs = node.findall(_('FormDef'))
-    return get_forms(studyevents, formdefs, groups)
+    studyevents = [parse_study_event(ev) for ev in node.findall(_('StudyEventDef'))]
+    formdefs = dict((f.attrib['OID'], f) for f in node.findall(_('FormDef')))
 
-def get_forms(studyevents, formdefs, groups):
-    return [parse_form(form_info(studyevent, formdefs), groups) for studyevent in studyevents]
+    active_forms = []
+    for se in studyevents:
+        for form_oid in se['forms']:
+            fnode = formdefs[form_oid]
+            if is_formdef_active(fnode):
+                active_forms.append({
+                        'studyevent_id': se['oid'],
+                        'form_oid': form_oid,
+                        'form_node': fnode,
+                    })
+        del se['forms']
 
-# my understanding was that StudyEvents contain FormDefs that are different revisions of
-# the same form (and selects the first as the most recent). the latest CRF has a StudyEvent
-# containing different forms. worry about this later.
-def form_info(studyevent, formdefs):
-    id = studyevent.attrib['OID']
-    versions = [fr.attrib['FormOID'] for fr in studyevent.findall(_('FormRef'))]
-    latest_version = versions[0]
-    form_node = [n for n in formdefs if n.attrib['OID'] == latest_version][0]
-    name = form_node.attrib['Name']
-    return {'id': id, 'name': name, 'version': latest_version, 'node': form_node}
+    return {
+        'study_events': studyevents,
+        'forms': [parse_form(form_info, groups) for form_info in active_forms],
+    }
 
 def parse_study(docroot, options={}):
     study = docroot.find(_('Study'))
@@ -247,15 +260,22 @@ def parse_study(docroot, options={}):
     node = study.find(_('MetaDataVersion'))
     mdv = node.attrib['OID']
 
-    mu = parse_units(study)
+    units = parse_units(study)
     codelists = parse_code_lists(node)
-    questions = parse_items(node, codelists, mu)
+    questions = parse_items(node, codelists, units)
     groups = parse_groups(node, questions)
-    forms = parse_forms(node, groups)
+    events_and_forms = parse_forms(node, groups)
     rules = parse_rules(node.find(_('Rules', 'ocr')))
 
     #inject_structure(forms[0], rules, options)
-    return (study_id, mdv), forms, rules
+
+    return {
+        'study_id': study_id,
+        'metadata_version': mdv,
+        'events': events_and_forms['study_events'],
+        'forms': events_and_forms['forms'],
+        'rules': rules,
+    }
 
 def _find_item(form, id):
     i = [n for n in _all_instance_nodes(form) if n.id == id][0]
@@ -265,6 +285,7 @@ def _find_item(form, id):
 def numchoices(id, min, max):
     return ChoiceList(id, None, None, [Choice(str(k), str(k)) for k in range(min, max)])
 
+"""
 def inject_structure(form, rules, options):
     crf_group = QuestionGroup('crf', None, form.items)
 
@@ -327,6 +348,7 @@ def inject_structure(form, rules, options):
     g_depr.items.insert(0, info_depr_intro)
 
     form.items = [reg_group, crf_group, tmp_group]
+"""
 
 def parse_rules(node):
     if node is None:
@@ -664,28 +686,14 @@ def itext(key):
 
 
 
-# utility code
-def create_audio(text, lang):
-    MEDIA_DIR = '/home/drew/tmp/uconn_media'
-
-    textbytes = text.encode('utf-8')
-    filename = '%s.mp3' % hashlib.sha1(lang + ':' + textbytes).hexdigest()[:16]
-    path = os.path.join(MEDIA_DIR, filename)
-    if not os.path.exists(path):
-        sys.stderr.write('generating audio for [%s]\n' % text[:30])
-        p = Popen('text2wave | lame --quiet -V2 - %s' % path, shell=True, stdin=PIPE)
-        p.communicate(textbytes)
-
-    return 'jr://audio/%s' % filename
 
 def convert_xform(f, opts):
     return _convert_xform(et.parse(f).getroot(), opts)
 
 def _convert_xform(root, options={'dumptx': False, 'translations': None}):
-    study_id, forms, rules = parse_study(root, options)
+    parsed_info = parse_study(root, options)
 
-    #util.pprint(forms)
-    #util.pprint(rules)
+    util.pprint(parsed_info)
 
     errors = []
     def build_all():
@@ -696,6 +704,10 @@ def _convert_xform(root, options={'dumptx': False, 'translations': None}):
                 logging.exception('error converting form %s' % form.name)
                 errors.append('error converting CRF %s: %s %s' % (form.name, type(e), str(e)))
     return list(build_all()), errors
+
+# list of errors
+# list of crfs, each crf namespace: study, mdv, sevt / foid
+
 
 
 
