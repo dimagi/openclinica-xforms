@@ -9,16 +9,18 @@ from datetime import date, datetime, timedelta
 import settings
 import logging
 
+def parse_xmlns(xmlns):
+    m = re.match(r'.+/(?P<study>[^/]+)/(?P<mdv>[^/]+)/(?P<studyevent>[^/]+)/(?P<form>[^/]+)/?', xmlns)
+    return dict((k, m.group(k)) for k in ('study', 'mdv', 'studyevent', 'form'))
+
 def parse_metadata(root):
     xmlns, tag = util.split_tag(root.tag)
-    m = re.match(r'.+/(?P<study>[^/]+)/(?P<mdv>[^/]+)/(?P<studyevent>[^/]+)/?', xmlns)
+    info = parse_xmlns(xmlns)
 
-    meta = {
-        'xmlns': xmlns,
-        'form': tag,
-    }
-    meta.update((k, m.group(k)) for k in ['study', 'mdv', 'studyevent'])
-    return meta
+    assert info['form'] == tag
+
+    info['xmlns'] = xmlns
+    return info
 
 def build_submission(root, ref_instance, reconcile=False):
     metadata = parse_metadata(root)

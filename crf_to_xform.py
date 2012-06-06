@@ -457,7 +457,7 @@ def build_xform(form, metadata, options):
     body = et.SubElement(root, _('body', 'h'))
 
     title = et.SubElement(head, _('title', 'h'))
-    title.text = form.name  #'%s :: %s' % (form.id, form.version)
+    title.text = form.name
     model = et.SubElement(head, _('model', 'xf'))
     build_model(model, form, metadata, options)
 
@@ -695,7 +695,7 @@ def convert_xform(f, opts):
 def _convert_xform(root, options={'dumptx': False, 'translations': None}):
     parsed_info = parse_study(root, options)
 
-    util.pprint(parsed_info)
+    #util.pprint(parsed_info)
 
     errors = []
     def build_all():
