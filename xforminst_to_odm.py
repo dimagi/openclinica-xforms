@@ -22,9 +22,9 @@ def parse_metadata(root):
     info['xmlns'] = xmlns
     return info
 
-def build_submission(root, ref_instance, reconcile=False):
+def build_submission(context, root, ref_instance, reconcile=False):
     metadata = parse_metadata(root)
-    resp, unwrap_instance = extract_data(root, metadata['xmlns'])
+    resp, unwrap_instance = extract_data(context, root, metadata['xmlns'])
 
     odm, odm_data_root = odm_scaffold(metadata, resp)
     crf_root = unwrap_instance(ref_instance, reconcile)
@@ -32,11 +32,6 @@ def build_submission(root, ref_instance, reconcile=False):
 
     resp.update({
         'odm': odm,
-        'study_id': settings.STUDY_NAME, #util.strip_oid(metadata['study'], 'study'),
-        'studyevent_id': metadata['studyevent'],
-        'form_id': metadata['form'],
-
-        'location': settings.SITE_ID,
     })
     return resp
 
@@ -47,30 +42,23 @@ def odm_scaffold(metadata, resp):
     clindata.attrib['MetaDataVersionOID'] = metadata['mdv']
 
     subjdata = et.SubElement(clindata, _('SubjectData'))
-    subjdata.attrib['SubjectKey'] = util.make_oid(resp['subject_id'], 'subj')
+    subjdata.attrib['SubjectKey'] = resp['subject_id']
 
     seevtdata = et.SubElement(subjdata, _('StudyEventData'))
     seevtdata.attrib['StudyEventOID'] = metadata['studyevent']
+    seevtdata.attrib['StudyEventRepeatKey'] = str(resp['event_ordinal'])
 
     return odm, seevtdata
 
-def extract_data(instroot, xmlns):
+def extract_data(context, instroot, xmlns):
     def _i(tag):
         return '{%s}%s' % (xmlns, tag)
 
-    #debug
-    import random
-    subj_id = 'K%d' % random.randint(0, 1000000)
-    logging.info('using random subject %s' % subj_id)
-
-    data = {
-        'subject_id': subj_id, #extract_subject(instroot, _i),
-        'gender': 'm', #extract_field(instroot, 'I_CPCS_GENDER', _i, {'10': 'm', '20': 'f'}),
-        'name': subj_id, #extract_field(instroot, 'initials', _i),
+    data = dict(context)
+    data.update({
         'start': datetime.now(), #TODO link to TimeStart
         'end': datetime.now(), #TODO link to TimeEnd
-        'birthdate': date(1983, 10, 6), # debug
-    }
+    })
 
     def unwrap_inst(ref_instance, reconcile):
         def real_inst(root):
@@ -85,13 +73,13 @@ def extract_data(instroot, xmlns):
 
     return data, unwrap_inst
 
-def extract_subject(root, _):
-    patient_info = root.find(_('subject'))
-    return patient_info.find(_('pat_id')).text
+#def extract_subject(root, _):
+#    patient_info = root.find(_('subject'))
+#    return patient_info.find(_('pat_id')).text
 
-def extract_field(root, nodename, _, mapping=None):
-    val = root.find('.//%s' % _(nodename)).text
-    return mapping[val] if mapping and val is not None else val
+#def extract_field(root, nodename, _, mapping=None):
+#    val = root.find('.//%s' % _(nodename)).text
+#    return mapping[val] if mapping and val is not None else val
 
 def trim_instance(inst_node):
     """remove temporary nodes from instance (starting with '__')"""
@@ -144,18 +132,18 @@ def convert_instance(in_node, out_node, form_name=None):
         q.attrib['ItemOID'] = name
         q.attrib['Value'] = (in_node.text or '')
 
-def convert_odm(f, source):
+def convert_odm(context, f, source):
     doc = et.parse(f)
     if source:
         ref_instance = list(source.find('.//%s' % _('instance', 'xf')))[0]
     else:
         ref_instance = None
 
-    return build_submission(doc.getroot(), ref_instance)
+    return build_submission(context, doc.getroot(), ref_instance)
 
-def process_instance(xfinst, xform_path):
+def process_instance(context, xfinst, xform_path):
     inst = util.strip_namespaces(et.fromstring(xfinst))
-    return convert_odm(util.xmlfile(xfinst), load_source(xform_path=xform_path))
+    return convert_odm(context, util.xmlfile(xfinst), load_source(xform_path=xform_path))
 
 def load_source(xform_path=None, crf_path=None):
     if not xform_path and not crf_path:
