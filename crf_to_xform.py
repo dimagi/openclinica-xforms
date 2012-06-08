@@ -73,6 +73,8 @@ class Question(object):
                 return {
                     'integer': 'int',
                     'float': 'float',
+                    'date': 'date',
+                    # time?
                     'barcode': 'barcode',
                 }[self.datatype]
             except KeyError:
@@ -100,7 +102,12 @@ class Question(object):
         if self.type() in ('str', 'select1', 'selectmulti'):
             return None
         else:
-            return {'int': 'int', 'float': 'decimal', 'barcode': 'barcode'}[self.type()]
+            try:
+                return {
+                    'float': 'decimal',
+                }[self.type()]
+            except KeyError:
+                return self.type()
 
     def xpathname(self):
         return self.id
