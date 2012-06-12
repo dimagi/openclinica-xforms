@@ -18,7 +18,11 @@ STUDY_WSDL = 'ws/study/v1/studyWsdl.wsdl'
 class ODMResponsePlugin(MessagePlugin):
     # FML!!!
     def parsed(self, context):
-        resp = context.reply.getChild('Envelope').getChild('Body').getChild('createResponse')
+        body = context.reply.getChild('Envelope').getChild('Body')
+        for tag in ['createResponse']:
+            resp = body.getChild(tag)
+            if resp is not None:
+                break
         if resp is None:
             # do nothing if payload is not a 'createResponse' type
             return
@@ -36,10 +40,7 @@ def connect(base_url, wsdl):
     wsdl_url = util.urlconcat(base_url, wsdl)
 
     logging.info('fetching wsdl %s' % wsdl_url)
-    kwargs = {}
-    if wsdl == STUDY_WSDL:
-        kwargs['plugins'] = [ODMResponsePlugin()]
-    client = Client(wsdl_url, **kwargs)
+    client = Client(wsdl_url, plugins=[ODMResponsePlugin()])
 
     # this doesn't seem safe...
     endpoint = client.wsdl.services[0].ports[0].location
@@ -122,16 +123,10 @@ def submit(conn, instnode):
 
 def study_export(conn, study_name):
     study = conn.factory.create('ns0:siteRefType')
-    study.identifier = 'default-study'
+    study.identifier = study_name
 
     resp = conn.service.getMetadata(study)
-    if resp.result:
-        # debugging
-        with open('/tmp/exportdump', 'w') as f:
-            f.write(resp.result)
-        return et.fromstring(resp.result)
-    else:
-        return None
+    return parse_odm(resp, '/tmp/exportdump')
 
 def list_studies(conn):
     resp = conn.service.listAll()
@@ -142,6 +137,24 @@ def list_studies(conn):
         return [get_study(s) for s in resp.studies]
     else:
         return None
+
+def get_schedule(conn, subj_id, study_name):
+    subj = conn.factory.create('ns0:studySubjectType')
+    subj.label = subj_id
+    subj.studyRef = conn.factory.create('ns0:studyRefType')
+    subj.studyRef.identifier = study_name
+    resp = conn.service.getStudySubjectEvent(subj)
+    return parse_odm(resp, '/tmp/subjectevents')
+
+def parse_odm(resp, debugout=None):
+    if not resp.result:
+        return None
+
+    # debugging
+    if debugout:
+        with open(debugout, 'w') as f:
+            f.write(resp.result)
+    return et.fromstring(resp.result)
 
 @contextmanager
 def raw_xml(conn):
@@ -171,9 +184,9 @@ if __name__ == "__main__":
         authenticate(conn, (USER, PASS))
         return conn
 
-    conn = auth(connect(SOAP_URL, STUDY_WSDL))
+    conn = auth(connect(SOAP_URL, SUBJ_WSDL))
 
-    print list_studies(conn)
+    print get_schedule(conn, 'K22984', 'default-study')
 
     """
     import random
