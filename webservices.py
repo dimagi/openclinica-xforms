@@ -36,11 +36,20 @@ class ODMResponsePlugin(MessagePlugin):
         else:
             result.setText('')
 
+class MultipartMimePlugin(MessagePlugin):
+    def received(self, context):
+        try:
+            et.fromstring(context.reply)
+        except:
+            # fix replies that are wrapped in multipart mime stuff
+            context.reply = re.search('<.*>', context.reply).group(0)
+
+
 def connect(base_url, wsdl):
     wsdl_url = util.urlconcat(base_url, wsdl)
 
     logging.info('fetching wsdl %s' % wsdl_url)
-    client = Client(wsdl_url, plugins=[ODMResponsePlugin()])
+    client = Client(wsdl_url, plugins=[ODMResponsePlugin(), MultipartMimePlugin()])
 
     # this doesn't seem safe...
     endpoint = client.wsdl.services[0].ports[0].location
@@ -77,6 +86,16 @@ def lookup_subject(conn, subj_id, study_id):
         return {'x': 'x'}
     else:
         return None
+
+def all_subjects(conn, study_name):
+    study = conn.factory.create('ns0:studyRefType')
+    study.identifier = study_name
+
+    resp = conn.service.listAllByStudy(study)
+    if resp.result.lower() != 'success':
+        raise Exception([str(e) for e in resp.error])
+
+    return [subj.label for subj in resp.studySubjects[0]]
 
 def create_subject(conn, subj_id, enrolled_on, birthdate, gender, name, study_id):
     subj = conn.factory.create('ns0:studySubjectType')
@@ -186,7 +205,9 @@ if __name__ == "__main__":
 
     conn = auth(connect(SOAP_URL, SUBJ_WSDL))
 
-    print get_schedule(conn, 'K22984', 'default-study')
+#    print get_schedule(conn, 'K22984', 'default-study')
+
+    print all_subjects(conn, 'default-study')
 
     """
     import random
