@@ -46,7 +46,8 @@ def odm_scaffold(metadata, resp):
 
     seevtdata = et.SubElement(subjdata, _('StudyEventData'))
     seevtdata.attrib['StudyEventOID'] = metadata['studyevent']
-    seevtdata.attrib['StudyEventRepeatKey'] = str(resp['event_ordinal'])
+    if resp['event_ordinal']:
+        seevtdata.attrib['StudyEventRepeatKey'] = str(resp['event_ordinal'])
 
     return odm, seevtdata
 
