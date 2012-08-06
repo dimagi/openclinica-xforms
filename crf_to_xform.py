@@ -67,19 +67,18 @@ class Question(object):
         self.sec_label = None
 
     def type(self):
-        if self.datatype == 'choice':
-            return 'select1' #can't handle multiselect yet
-        else:
-            try:
-                return {
-                    'integer': 'int',
-                    'float': 'float',
-                    'date': 'date',
-                    'time': 'time',
-                    'barcode': 'barcode',
-                }[self.datatype]
-            except KeyError:
-                return 'str'
+        try:
+            return {
+                'choice': 'select1',
+                'multichoice': 'selectmulti',
+                'integer': 'int',
+                'float': 'float',
+                'date': 'date',
+                'time': 'time',
+                'barcode': 'barcode',
+            }[self.datatype]
+        except KeyError:
+            return 'str'
 
     def choices(self):
         if self._ch:
@@ -146,17 +145,25 @@ def _(tag, ns_prefix=None):
 
 def parse_code_lists(root):
     code_lists = [parse_code_list(cl_node) for cl_node in root.findall(_('CodeList'))]
+    code_lists.extend(parse_code_list(cl_node, True) for cl_node in root.findall(_('MultiSelectList', 'oc')))
     return dict((cl.id, cl) for cl in code_lists)
 
-def parse_code_list(cl_node):
-    id = cl_node.attrib['OID']
+def parse_code_list(cl_node, multi=False):
+    if multi:
+        id_attr = 'ID'
+        item_tag = _('MultiSelectListItem', 'oc')
+    else:
+        id_attr = 'OID'
+        item_tag = _('CodeListItem')
+
+    id = cl_node.attrib[id_attr]
     name = cl_node.attrib['Name']
     datatype = cl_node.attrib['DataType']
-    choices = [parse_code_list_item(cli_node, datatype) for cli_node in cl_node.findall(_('CodeListItem'))]
+    choices = [parse_code_list_item(cli_node, datatype) for cli_node in cl_node.findall(item_tag)]
     return ChoiceList(id, name, datatype, choices)
 
 def parse_code_list_item(cli_node, datatype):
-    value = cli_node.attrib['CodedValue']
+    value = cli_node.attrib.get('CodedValue') or cli_node.attrib.get('CodedOptionValue')
     label = cli_node.find(_('Decode')).find(_('TranslatedText')).text.strip()
 
     if datatype == 'integer':
@@ -194,9 +201,13 @@ def parse_item(item_node, code_lists, units={}):
             label += ' (in %s)' % unit
 
     choices_node = item_node.find(_('CodeListRef'))
+    multichoices_node = item_node.find(_('MultiSelectListRef', 'oc'))
     if choices_node is not None:
         datatype = 'choice'
         choices = code_lists[choices_node.attrib['CodeListOID']]
+    elif multichoices_node is not None:
+        datatype = 'multichoice'
+        choices = code_lists[multichoices_node.attrib['MultiSelectListID']]
     else:
         choices = None
 
