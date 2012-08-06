@@ -65,6 +65,7 @@ class Question(object):
         self._ch = choices
         self.required = None
         self.sec_label = None
+        self.ctrl_type = None
 
     def type(self):
         try:
@@ -216,6 +217,11 @@ def parse_item(item_node, code_lists, units={}):
     seclabel_node = item_node.find('.//%s' % _('SectionLabel', 'oc'))
     if seclabel_node is not None:
         q.sec_label = seclabel_node.text
+
+    if datatype == 'choice':
+        appnode = item_node.find('.//%s' % _('ItemResponse', 'oc'))
+        if appnode is not None:
+            q.ctrl_type = appnode.attrib['ResponseType']
 
     return q
 
@@ -708,6 +714,9 @@ def build_question(item):
         make_label(ch, choice.ref_id, choice.label)
         val = et.SubElement(ch, _('value', 'xf'))
         val.text = str(choice.value)
+    if item.type() in ('select1', 'selectmulti') and item.ctrl_type in ('single-select', 'multi-select'):
+        q.attrib['appearance'] = 'compact'
+
     return q
 
 def make_label(parent, key=None, inline=None):
