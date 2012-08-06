@@ -74,7 +74,7 @@ class Question(object):
                     'integer': 'int',
                     'float': 'float',
                     'date': 'date',
-                    # time?
+                    'time': 'time',
                     'barcode': 'barcode',
                 }[self.datatype]
             except KeyError:
@@ -173,8 +173,14 @@ def parse_item(item_node, code_lists, units={}):
     datatype = item_node.attrib['DataType']
     # maxlen?
 
+    unit = None
     mu_node = item_node.find(_('MeasurementUnitRef'))
-    unit = units[mu_node.attrib['MeasurementUnitOID']] if mu_node is not None else None
+    if mu_node is not None:
+        unit_code = mu_node.attrib['MeasurementUnitOID']
+        if unit_code == 'MU_24HRHHMM':
+            datatype = 'time'
+        else:
+            unit = units[unit_code]
 
     q_node = item_node.find(_('Question'))
     if q_node is None:

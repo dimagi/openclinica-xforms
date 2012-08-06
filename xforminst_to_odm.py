@@ -122,6 +122,11 @@ def convert_instance(in_node, out_node, form_name=None):
     else:
         value = (in_node.text or '')
         
+        # hack to fix time answers
+        m = re.match(r'(\d{1,2}):(\d{2}):\d{2}', value)
+        if m:
+            value = '%02d%02d' % (int(m.group(1)), int(m.group(2)))
+
         ALLOW_FORCE_COMPLETION = True  # if we allow form to be submitted in incomplete state -- required questions might be blank
         is_required = True # TODO figure out how to pull this from the crf definition; i think currently everything is required so doesn't matter
 
@@ -131,7 +136,7 @@ def convert_instance(in_node, out_node, form_name=None):
 
         q = et.SubElement(out_node, _('ItemData'))
         q.attrib['ItemOID'] = name
-        q.attrib['Value'] = (in_node.text or '')
+        q.attrib['Value'] = value
 
 def convert_odm(context, f, source):
     doc = et.parse(f)
