@@ -64,6 +64,7 @@ class Question(object):
         self.label = label
         self._ch = choices
         self.required = None
+        self.sec_label = None
 
     def type(self):
         if self.datatype == 'choice':
@@ -199,7 +200,13 @@ def parse_item(item_node, code_lists, units={}):
     else:
         choices = None
 
-    return Question(id, name, datatype, label, choices)
+    q = Question(id, name, datatype, label, choices)
+
+    seclabel_node = item_node.find('.//%s' % _('SectionLabel', 'oc'))
+    if seclabel_node is not None:
+        q.sec_label = seclabel_node.text
+
+    return q
 
 def parse_groups(root, items):
     groups = [parse_group(group_node, items) for group_node in root.findall(_('ItemGroupDef'))]
@@ -218,6 +225,10 @@ def parse_group(group_node, items):
         child.required = (itemrefnode.attrib['Mandatory'].lower() == 'yes')
         return child
     children = filter(lambda e: e, (get_child(c) for c in child_nodes))
+
+    sec_label = reduce(lambda lab, q: lab or q.sec_label, children, None)
+    if sec_label:
+        name = sec_label
 
     return QuestionGroup(id, name, children)
 
